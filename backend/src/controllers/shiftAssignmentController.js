@@ -1,5 +1,5 @@
 // backend/src/controllers/shiftAssignmentController.js
-const ShiftAssignment = require("../models/ShiftAssignment");
+const ShiftAssignment = require("../models/shiftAssignmentModel");
 
 // GET /api/shift-assignments
 // optional query: ?shift=<shiftId>&employee=<employeeId>

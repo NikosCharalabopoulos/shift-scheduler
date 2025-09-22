@@ -1,5 +1,5 @@
 // backend/src/controllers/timeOffController.js
-const TimeOff = require("../models/TimeOff");
+const TimeOff = require("../models/timeOffModel");
 
 // GET /api/timeoff
 // optional query: ?employee=<id>&status=PENDING|APPROVED|DECLINED&from=YYYY-MM-DD&to=YYYY-MM-DD

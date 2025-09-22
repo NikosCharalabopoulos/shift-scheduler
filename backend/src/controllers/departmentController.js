@@ -1,5 +1,5 @@
 // backend/src/controllers/departmentController.js
-const Department = require("../models/Department");
+const Department = require("../models/departmentModel");
 
 // GET /api/departments
 const getAllDepartments = async (req, res) => {

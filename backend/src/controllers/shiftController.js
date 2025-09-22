@@ -1,5 +1,5 @@
 // backend/src/controllers/shiftController.js
-const Shift = require("../models/Shift");
+const Shift = require("../models/shiftModel");
 
 // GET /api/shifts
 // optional query: ?department=<id>&from=YYYY-MM-DD&to=YYYY-MM-DD

@@ -1,5 +1,5 @@
 // backend/src/controllers/availabilityController.js
-const Availability = require("../models/Availability");
+const Availability = require("../models/availabilityModel");
 
 // GET /api/availability
 // optional query: ?employee=<id>

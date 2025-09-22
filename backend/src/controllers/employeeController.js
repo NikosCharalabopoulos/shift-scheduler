@@ -1,5 +1,5 @@
 // backend/src/controllers/employeeController.js
-const Employee = require("../models/Employee");
+const Employee = require("../models/employeeModel");
 
 // GET /api/employees
 const getAllEmployees = async (req, res) => {
