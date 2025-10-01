@@ -1,5 +1,11 @@
 // backend/src/controllers/shiftAssignmentController.js
 const ShiftAssignment = require("../models/shiftAssignmentModel");
+const Shift = require("../models/shiftModel");
+const {
+  hasTimeOffConflict,
+  hasShiftOverlap,
+  violatesAvailability
+} = require("../services/conflictService");
 
 // GET /api/shift-assignments
 // optional query: ?shift=<shiftId>&employee=<employeeId>
@@ -46,12 +52,32 @@ const createShiftAssignment = async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // Προαιρετικός έλεγχος διπλοεγγραφής (ίδιο shift + employee)
+    // 0) διπλοεγγραφή
     const exists = await ShiftAssignment.findOne({ shift, employee });
     if (exists) {
       return res.status(409).json({ message: "Employee already assigned to this shift" });
     }
 
+    // 1) στοιχεία shift
+    const s = await Shift.findById(shift).lean();
+    if (!s) return res.status(404).json({ message: "Shift not found" });
+
+    // 2) time-off conflict
+    if (await hasTimeOffConflict(employee, s.date)) {
+      return res.status(422).json({ message: "Employee has approved time-off on this date", code: "TIME_OFF_CONFLICT" });
+    }
+
+    // 3) overlap με άλλη βάρδια
+    if (await hasShiftOverlap(employee, s.date, s.startTime, s.endTime)) {
+      return res.status(422).json({ message: "Employee has overlapping shift", code: "SHIFT_OVERLAP" });
+    }
+
+    // 4) availability violation (αν υπάρχει δηλωμένη)
+    if (await violatesAvailability(employee, s.date, s.startTime, s.endTime)) {
+      return res.status(422).json({ message: "Shift is outside employee availability", code: "AVAILABILITY_VIOLATION" });
+    }
+
+    // 5) OK create
     const row = new ShiftAssignment({ shift, employee, assignedBy });
     const saved = await row.save();
     const populated = await saved
@@ -66,31 +92,44 @@ const createShiftAssignment = async (req, res) => {
 };
 
 // PATCH /api/shift-assignments/:id
-// επιτρέπει π.χ. αλλαγή του assignedBy (αν θέλεις να καταγράψεις νέο manager)
 const updateShiftAssignment = async (req, res) => {
   const { id } = req.params;
   const { shift, employee, assignedBy } = req.body;
 
   try {
-    const dataToUpdate = {};
-    if (shift !== undefined) dataToUpdate.shift = shift;
-    if (employee !== undefined) dataToUpdate.employee = employee;
-    if (assignedBy !== undefined) dataToUpdate.assignedBy = assignedBy;
+    const current = await ShiftAssignment.findById(id);
+    if (!current) return res.status(404).json({ message: "Shift assignment not found" });
 
-    const updated = await ShiftAssignment.findByIdAndUpdate(id, dataToUpdate, {
-      new: true,
-      runValidators: true,
-      context: "query"
-    })
+    const nextShiftId = shift ?? current.shift.toString();
+    const nextEmployeeId = employee ?? current.employee.toString();
+
+    const s = await Shift.findById(nextShiftId).lean();
+    if (!s) return res.status(404).json({ message: "Shift not found" });
+
+    // κανόνες με εξαίρεση το ίδιο assignment (για overlap)
+    if (await hasTimeOffConflict(nextEmployeeId, s.date)) {
+      return res.status(422).json({ message: "Employee has approved time-off on this date", code: "TIME_OFF_CONFLICT" });
+    }
+
+    if (await hasShiftOverlap(nextEmployeeId, s.date, s.startTime, s.endTime, current._id)) {
+      return res.status(422).json({ message: "Employee has overlapping shift", code: "SHIFT_OVERLAP" });
+    }
+
+    if (await violatesAvailability(nextEmployeeId, s.date, s.startTime, s.endTime)) {
+      return res.status(422).json({ message: "Shift is outside employee availability", code: "AVAILABILITY_VIOLATION" });
+    }
+
+    current.shift = nextShiftId;
+    current.employee = nextEmployeeId;
+    if (assignedBy !== undefined) current.assignedBy = assignedBy;
+
+    const saved = await current.save();
+    const populated = await saved
       .populate({ path: "shift", populate: { path: "department" } })
       .populate({ path: "employee", populate: { path: "user", select: "-passwordHash" } })
       .populate({ path: "assignedBy", select: "-passwordHash" });
 
-    if (!updated) {
-      return res.status(404).json({ message: "Shift assignment not found" });
-    }
-
-    res.status(200).json(updated);
+    res.status(200).json(populated);
   } catch (error) {
     res.status(500).json({ message: "Error updating shift assignment", error });
   }
