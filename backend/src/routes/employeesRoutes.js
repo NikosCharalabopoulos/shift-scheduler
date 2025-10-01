@@ -1,28 +1,19 @@
-// backend/src/routes/employeesRoutes.js
 const express = require("express");
+const { auth, requireRole } = require("../middleware/auth");
+const { validate } = require("../middleware/validate");
 const {
-  getAllEmployees,
-  getEmployeeById,
-  createEmployee,
-  updateEmployee,
-  deleteEmployee
+  createEmployeeValidator, updateEmployeeValidator, employeeIdParam
+} = require("../validators/employeeValidators");
+const {
+  getAllEmployees, getEmployeeById, createEmployee, updateEmployee, deleteEmployee
 } = require("../controllers/employeeController");
 
 const router = express.Router();
 
-// GET /api/employees
-router.get("/", getAllEmployees);
-
-// GET /api/employees/:id
-router.get("/:id", getEmployeeById);
-
-// POST /api/employees
-router.post("/", createEmployee);
-
-// PATCH /api/employees/:id
-router.patch("/:id", updateEmployee);
-
-// DELETE /api/employees/:id
-router.delete("/:id", deleteEmployee);
+router.get("/", auth, requireRole("OWNER","MANAGER"), getAllEmployees);
+router.get("/:id", auth, requireRole("OWNER","MANAGER"), employeeIdParam, validate, getEmployeeById);
+router.post("/", auth, requireRole("OWNER","MANAGER"), createEmployeeValidator, validate, createEmployee);
+router.patch("/:id", auth, requireRole("OWNER","MANAGER"), updateEmployeeValidator, validate, updateEmployee);
+router.delete("/:id", auth, requireRole("OWNER","MANAGER"), employeeIdParam, validate, deleteEmployee);
 
 module.exports = router;

@@ -1,28 +1,20 @@
-// backend/src/routes/timeOffRoutes.js
 const express = require("express");
+const { auth, requireRole } = require("../middleware/auth");
+const { validate } = require("../middleware/validate");
 const {
-  getAllTimeOff,
-  getTimeOffById,
-  createTimeOff,
-  updateTimeOff,
-  deleteTimeOff
-} = require("../controllers/timeOffController");
+  createTimeOffValidator, updateTimeOffValidator,
+  timeOffIdParam, timeOffListQuery
+} = require("../validators/timeOffValidators");
+const {
+  getAllTimeOff, getTimeOffById, createTimeOff, updateTimeOff, deleteTimeOff
+} = require("..//controllers/timeOffController");
 
 const router = express.Router();
 
-// GET /api/timeoff
-router.get("/", getAllTimeOff);
-
-// GET /api/timeoff/:id
-router.get("/:id", getTimeOffById);
-
-// POST /api/timeoff
-router.post("/", createTimeOff);
-
-// PATCH /api/timeoff/:id
-router.patch("/:id", updateTimeOff);
-
-// DELETE /api/timeoff/:id
-router.delete("/:id", deleteTimeOff);
+router.get("/", auth, requireRole("OWNER","MANAGER"), timeOffListQuery, validate, getAllTimeOff);
+router.get("/:id", auth, requireRole("OWNER","MANAGER"), timeOffIdParam, validate, getTimeOffById);
+router.post("/", auth, requireRole("OWNER","MANAGER"), createTimeOffValidator, validate, createTimeOff);
+router.patch("/:id", auth, requireRole("OWNER","MANAGER"), updateTimeOffValidator, validate, updateTimeOff);
+router.delete("/:id", auth, requireRole("OWNER","MANAGER"), timeOffIdParam, validate, deleteTimeOff);
 
 module.exports = router;

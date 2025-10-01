@@ -1,28 +1,20 @@
-// backend/src/routes/shiftsRoutes.js
 const express = require("express");
+const { auth, requireRole } = require("../middleware/auth");
+const { validate } = require("../middleware/validate");
 const {
-  getAllShifts,
-  getShiftById,
-  createShift,
-  updateShift,
-  deleteShift
+  createShiftValidator, updateShiftValidator,
+  shiftIdParam, shiftListQuery
+} = require("../validators/shiftValidators");
+const {
+  getAllShifts, getShiftById, createShift, updateShift, deleteShift
 } = require("../controllers/shiftController");
 
 const router = express.Router();
 
-// GET /api/shifts
-router.get("/", getAllShifts);
-
-// GET /api/shifts/:id
-router.get("/:id", getShiftById);
-
-// POST /api/shifts
-router.post("/", createShift);
-
-// PATCH /api/shifts/:id
-router.patch("/:id", updateShift);
-
-// DELETE /api/shifts/:id
-router.delete("/:id", deleteShift);
+router.get("/", auth, requireRole("OWNER","MANAGER"), shiftListQuery, validate, getAllShifts);
+router.get("/:id", auth, requireRole("OWNER","MANAGER"), shiftIdParam, validate, getShiftById);
+router.post("/", auth, requireRole("OWNER","MANAGER"), createShiftValidator, validate, createShift);
+router.patch("/:id", auth, requireRole("OWNER","MANAGER"), updateShiftValidator, validate, updateShift);
+router.delete("/:id", auth, requireRole("OWNER","MANAGER"), shiftIdParam, validate, deleteShift);
 
 module.exports = router;

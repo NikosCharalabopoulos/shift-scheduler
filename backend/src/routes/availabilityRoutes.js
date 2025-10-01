@@ -1,28 +1,20 @@
-// backend/src/routes/availabilityRoutes.js
 const express = require("express");
+const { auth, requireRole } = require("../middleware/auth");
+const { validate } = require("../middleware/validate");
 const {
-  getAllAvailability,
-  getAvailabilityById,
-  createAvailability,
-  updateAvailability,
-  deleteAvailability
+  createAvailabilityValidator, updateAvailabilityValidator,
+  availabilityIdParam, availabilityListQuery
+} = require("../validators/availabilityValidators");
+const {
+  getAllAvailability, getAvailabilityById, createAvailability, updateAvailability, deleteAvailability
 } = require("../controllers/availabilityController");
 
 const router = express.Router();
 
-// GET /api/availability
-router.get("/", getAllAvailability);
-
-// GET /api/availability/:id
-router.get("/:id", getAvailabilityById);
-
-// POST /api/availability
-router.post("/", createAvailability);
-
-// PATCH /api/availability/:id
-router.patch("/:id", updateAvailability);
-
-// DELETE /api/availability/:id
-router.delete("/:id", deleteAvailability);
+router.get("/", auth, requireRole("OWNER","MANAGER"), availabilityListQuery, validate, getAllAvailability);
+router.get("/:id", auth, requireRole("OWNER","MANAGER"), availabilityIdParam, validate, getAvailabilityById);
+router.post("/", auth, requireRole("OWNER","MANAGER"), createAvailabilityValidator, validate, createAvailability);
+router.patch("/:id", auth, requireRole("OWNER","MANAGER"), updateAvailabilityValidator, validate, updateAvailability);
+router.delete("/:id", auth, requireRole("OWNER","MANAGER"), availabilityIdParam, validate, deleteAvailability);
 
 module.exports = router;

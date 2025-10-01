@@ -1,28 +1,19 @@
-// backend/src/routes/usersRoutes.js
 const express = require("express");
+const { auth, requireRole } = require("../middleware/auth");
+const { validate } = require("../middleware/validate");
 const {
-  getAllUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser
+  createUserValidator, updateUserValidator, userIdParam
+} = require("../validators/userValidators");
+const {
+  getAllUsers, getUserById, createUser, updateUser, deleteUser
 } = require("../controllers/userController");
 
 const router = express.Router();
 
-// GET /api/users
-router.get("/", getAllUsers);
-
-// GET /api/users/:id
-router.get("/:id", getUserById);
-
-// POST /api/users
-router.post("/", createUser);
-
-// PATCH /api/users/:id
-router.patch("/:id", updateUser);
-
-// DELETE /api/users/:id
-router.delete("/:id", deleteUser);
+router.get("/", auth, requireRole("OWNER","MANAGER"), getAllUsers);
+router.get("/:id", auth, requireRole("OWNER","MANAGER"), userIdParam, validate, getUserById);
+router.post("/", auth, requireRole("OWNER","MANAGER"), createUserValidator, validate, createUser);
+router.patch("/:id", auth, requireRole("OWNER","MANAGER"), updateUserValidator, validate, updateUser);
+router.delete("/:id", auth, requireRole("OWNER"), userIdParam, validate, deleteUser);
 
 module.exports = router;
