@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
 const { connectDB } = require("./config/db");
 
+
 // φορτώνουμε μεταβλητές από .env
 dotenv.config();
 
@@ -27,6 +28,10 @@ app.use("/api/availability", require("./routes/availabilityRoutes"));
 app.use("/api/timeoff", require("./routes/timeOffRoutes"));
 app.use("/api/shifts", require("./routes/shiftsRoutes"));
 app.use("/api/shift-assignments", require("./routes/shiftAssignmentsRoutes"));
+
+const { notFound, errorHandler } = require("./middleware/errorHandler");
+app.use(notFound);
+app.use(errorHandler);
 
 // start server
 const PORT = process.env.PORT || 5000;
