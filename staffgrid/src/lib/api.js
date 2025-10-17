@@ -1,8 +1,11 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true
+export const api = axios.create({
+  baseURL: "http://localhost:5000/api",
+  withCredentials: true // στέλνει/λαμβάνει το HttpOnly cookie sg_token
 });
 
-export default api;
+// helper για errors (προαιρετικό)
+export function getErrorMessage(err) {
+  return err?.response?.data?.message || err.message || "Request failed";
+}

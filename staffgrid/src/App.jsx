@@ -1,19 +1,51 @@
-import { useEffect, useState } from "react";
-import api from "./lib/api";
+import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
+import RoleGuard from "./components/RoleGuard";
 
-function App() {
-  const [health, setHealth] = useState(null);
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Users from "./pages/Users";
+import Departments from "./pages/Departments";
+import Employees from "./pages/Employees";
 
-  useEffect(() => {
-    api.get("/health").then(res => setHealth(res.data)).catch(() => setHealth({ ok: false }));
-  }, []);
-
+export default function App() {
   return (
-    <div style={{ padding: 24 }}>
-      <h1>StaffGrid</h1>
-      <p>Backend health: {health ? JSON.stringify(health) : "loading..."}</p>
-    </div>
+    <Routes>
+      {/* Public */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Protected */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/users"
+          element={
+            <RoleGuard allow={["OWNER", "MANAGER"]}>
+              <Users />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/departments"
+          element={
+            <RoleGuard allow={["OWNER", "MANAGER"]}>
+              <Departments />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/employees"
+          element={
+            <RoleGuard allow={["OWNER", "MANAGER"]}>
+              <Employees />
+            </RoleGuard>
+          }
+        />
+      </Route>
+
+      {/* Fallback */}
+      <Route path="*" element={<div style={{ padding: 24 }}>Not found</div>} />
+    </Routes>
   );
 }
-
-export default App;
