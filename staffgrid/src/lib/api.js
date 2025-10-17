@@ -5,7 +5,7 @@ export const api = axios.create({
   withCredentials: true // στέλνει/λαμβάνει το HttpOnly cookie sg_token
 });
 
-// helper για errors (προαιρετικό)
+// helper for errors 
 export function getErrorMessage(err) {
   return err?.response?.data?.message || err.message || "Request failed";
 }
