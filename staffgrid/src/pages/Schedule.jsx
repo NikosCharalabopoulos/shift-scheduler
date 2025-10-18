@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, getErrorMessage } from "../lib/api";
-import { startOfWeek, addDays, formatISODate, formatShort } from "../utils/date";
+import { startOfWeek, addDays, formatYMDLocal, formatShort } from "../utils/date";
 import ShiftFormModal from "../components/ShiftFormModal";
 import AssignModal from "../components/AssignModal";
 
@@ -28,8 +28,8 @@ export default function Schedule() {
     if (!departmentId) return;
     setLoading(true); setErr("");
     try {
-      const from = formatISODate(days[0]);
-      const to = formatISODate(addDays(days[6], 1)); // inclusive week
+      const from = formatYMDLocal(days[0]);
+      const to = formatYMDLocal(addDays(days[6], 1));
       const { data } = await api.get("/shifts", { params: { department: departmentId, from, to } });
       setShifts(data || []);
     } catch (e) {
@@ -105,7 +105,7 @@ export default function Schedule() {
         alignItems:"start"
       }}>
         {days.map((d) => {
-          const key = formatISODate(d);
+          const key = formatYMDLocal(d);
           const list = shiftsByDate[key] || [];
           return (
             <div key={key} style={{ border:"1px solid #e2e8f0", borderRadius:12, padding:12, minHeight:140 }}>

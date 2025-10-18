@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Departments from "./pages/Departments";
 import Employees from "./pages/Employees";
+import Schedule from "./pages/Schedule"; // ✅ νέο import
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
+
         <Route
           path="/users"
           element={
@@ -26,6 +28,7 @@ export default function App() {
             </RoleGuard>
           }
         />
+
         <Route
           path="/departments"
           element={
@@ -34,11 +37,22 @@ export default function App() {
             </RoleGuard>
           }
         />
+
         <Route
           path="/employees"
           element={
             <RoleGuard allow={["OWNER", "MANAGER"]}>
               <Employees />
+            </RoleGuard>
+          }
+        />
+
+        {/* ✅ ΝΕΟ ROUTE για το Schedule */}
+        <Route
+          path="/schedule"
+          element={
+            <RoleGuard allow={["OWNER", "MANAGER"]}>
+              <Schedule />
             </RoleGuard>
           }
         />

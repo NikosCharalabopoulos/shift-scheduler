@@ -1,3 +1,4 @@
+// src/utils/date.js
 export function startOfWeek(d) {
   const date = new Date(d);
   const day = date.getDay(); // 0=Sun..6=Sat
@@ -13,11 +14,19 @@ export function addDays(d, n) {
   return dt;
 }
 
-export function formatISODate(d) {
+// ✅ ΝΕΟ: local YYYY-MM-DD (όχι UTC)
+export function formatYMDLocal(d) {
   const dt = new Date(d);
-  return dt.toISOString().slice(0, 10);
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function formatShort(d) {
-  return new Date(d).toLocaleDateString(undefined, { weekday: "short", day: "2-digit", month: "2-digit" });
+  return new Date(d).toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  });
 }
