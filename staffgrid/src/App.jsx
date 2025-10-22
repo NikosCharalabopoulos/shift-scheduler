@@ -9,6 +9,11 @@ import Departments from "./pages/Departments";
 import Employees from "./pages/Employees";
 import Schedule from "./pages/Schedule"; // ✅ νέο import
 
+// Employee Portal pages
+import MySchedule from "./pages/employee/MySchedule";
+import MyTimeOff from "./pages/employee/MyTimeOff";
+import MyAvailability from "./pages/employee/MyAvailability";
+
 export default function App() {
   return (
     <Routes>
@@ -47,12 +52,38 @@ export default function App() {
           }
         />
 
-        {/* ✅ ΝΕΟ ROUTE για το Schedule */}
+        {/* ✅ Admin schedule */}
         <Route
           path="/schedule"
           element={
             <RoleGuard allow={["OWNER", "MANAGER"]}>
               <Schedule />
+            </RoleGuard>
+          }
+        />
+
+        {/* ✅ Employee Portal routes */}
+        <Route
+          path="/my-schedule"
+          element={
+            <RoleGuard allow={["EMPLOYEE"]}>
+              <MySchedule />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/my-timeoff"
+          element={
+            <RoleGuard allow={["EMPLOYEE"]}>
+              <MyTimeOff />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/my-availability"
+          element={
+            <RoleGuard allow={["EMPLOYEE"]}>
+              <MyAvailability />
             </RoleGuard>
           }
         />

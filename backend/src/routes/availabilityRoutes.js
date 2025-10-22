@@ -1,5 +1,5 @@
 const express = require("express");
-const { auth, requireRole } = require("../middleware/auth");
+const { auth } = require("../middleware/auth");
 const { validate } = require("../middleware/validate");
 const {
   createAvailabilityValidator, updateAvailabilityValidator,
@@ -11,10 +11,11 @@ const {
 
 const router = express.Router();
 
-router.get("/", auth, requireRole("OWNER","MANAGER"), availabilityListQuery, validate, getAllAvailability);
-router.get("/:id", auth, requireRole("OWNER","MANAGER"), availabilityIdParam, validate, getAvailabilityById);
-router.post("/", auth, requireRole("OWNER","MANAGER"), createAvailabilityValidator, validate, createAvailability);
-router.patch("/:id", auth, requireRole("OWNER","MANAGER"), updateAvailabilityValidator, validate, updateAvailability);
-router.delete("/:id", auth, requireRole("OWNER","MANAGER"), availabilityIdParam, validate, deleteAvailability);
+// Όλοι οι ρόλοι με auth. Το self-scope/permissions εφαρμόζονται στον controller.
+router.get("/", auth, availabilityListQuery, validate, getAllAvailability);
+router.get("/:id", auth, availabilityIdParam, validate, getAvailabilityById);
+router.post("/", auth, createAvailabilityValidator, validate, createAvailability);
+router.patch("/:id", auth, updateAvailabilityValidator, validate, updateAvailability);
+router.delete("/:id", auth, availabilityIdParam, validate, deleteAvailability);
 
 module.exports = router;

@@ -1,5 +1,5 @@
 const express = require("express");
-const { auth, requireRole } = require("../middleware/auth");
+const { auth } = require("../middleware/auth");
 const { validate } = require("../middleware/validate");
 const {
   createTimeOffValidator, updateTimeOffValidator,
@@ -7,14 +7,15 @@ const {
 } = require("../validators/timeOffValidators");
 const {
   getAllTimeOff, getTimeOffById, createTimeOff, updateTimeOff, deleteTimeOff
-} = require("..//controllers/timeOffController");
+} = require("../controllers/timeOffController");
 
 const router = express.Router();
 
-router.get("/", auth, requireRole("OWNER","MANAGER"), timeOffListQuery, validate, getAllTimeOff);
-router.get("/:id", auth, requireRole("OWNER","MANAGER"), timeOffIdParam, validate, getTimeOffById);
-router.post("/", auth, requireRole("OWNER","MANAGER"), createTimeOffValidator, validate, createTimeOff);
-router.patch("/:id", auth, requireRole("OWNER","MANAGER"), updateTimeOffValidator, validate, updateTimeOff);
-router.delete("/:id", auth, requireRole("OWNER","MANAGER"), timeOffIdParam, validate, deleteTimeOff);
+// Όλοι οι ρόλοι με auth. Ο controller χειρίζεται self-scope και τι επιτρέπεται να αλλάξει ποιος.
+router.get("/", auth, timeOffListQuery, validate, getAllTimeOff);
+router.get("/:id", auth, timeOffIdParam, validate, getTimeOffById);
+router.post("/", auth, createTimeOffValidator, validate, createTimeOff);
+router.patch("/:id", auth, updateTimeOffValidator, validate, updateTimeOff);
+router.delete("/:id", auth, timeOffIdParam, validate, deleteTimeOff);
 
 module.exports = router;
