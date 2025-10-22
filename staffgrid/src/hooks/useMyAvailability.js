@@ -26,6 +26,13 @@ export default function useMyAvailability() {
 
   const createItem = async (payload) => {
     await api.post("/availability", payload);
+  };
+
+  // ✅ ΝΕΟ: batch create (ένα POST ανά selected weekday)
+  const createMany = async (payloads) => {
+    for (const p of payloads) {
+      await createItem(p);
+    }
     await fetchAll();
   };
 
@@ -39,5 +46,14 @@ export default function useMyAvailability() {
     await fetchAll();
   };
 
-  return { rows, loading, err, createItem, updateItem, deleteItem, refetch: fetchAll };
+  return {
+    rows,
+    loading,
+    err,
+    createItem,
+    createMany, // ✅
+    updateItem,
+    deleteItem,
+    refetch: fetchAll
+  };
 }
