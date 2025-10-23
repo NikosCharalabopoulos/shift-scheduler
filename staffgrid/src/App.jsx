@@ -7,7 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Departments from "./pages/Departments";
 import Employees from "./pages/Employees";
-import Schedule from "./pages/Schedule"; // ✅ νέο import
+import Schedule from "./pages/ScheduleWrapper";
 
 // Employee Portal pages
 import MySchedule from "./pages/employee/MySchedule";

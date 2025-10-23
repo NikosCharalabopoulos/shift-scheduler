@@ -1,4 +1,5 @@
-// src/utils/date.js
+// staffgrid/src/utils/date.js
+
 export function startOfWeek(d) {
   const date = new Date(d);
   const day = date.getDay(); // 0=Sun..6=Sat
@@ -14,7 +15,7 @@ export function addDays(d, n) {
   return dt;
 }
 
-// ✅ ΝΕΟ: local YYYY-MM-DD (όχι UTC)
+// ✅ local YYYY-MM-DD (όχι UTC)
 export function formatYMDLocal(d) {
   const dt = new Date(d);
   const y = dt.getFullYear();
@@ -29,4 +30,58 @@ export function formatShort(d) {
     day: "2-digit",
     month: "2-digit",
   });
+}
+
+/* ---------- Month helpers (νέα) ---------- */
+
+export function startOfMonth(d) {
+  const dt = new Date(d.getFullYear(), d.getMonth(), 1);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+
+export function endOfMonth(d) {
+  const dt = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  dt.setHours(23, 59, 59, 999);
+  return dt;
+}
+
+export function addMonths(d, n) {
+  const dt = new Date(d);
+  dt.setMonth(dt.getMonth() + n);
+  return dt;
+}
+
+// Monday-first month matrix: 5–6 εβδομάδες, 7 μέρες/εβδομάδα
+export function getMonthMatrix(anchorDate) {
+  const firstOfMonth = startOfMonth(anchorDate);
+  const lastOfMonth = endOfMonth(anchorDate);
+
+  // Από ποια Δευτέρα ξεκινάει το grid
+  const gridStart = startOfWeek(firstOfMonth);
+
+  // Πόσες μέρες θα δείξουμε: 35 (5 εβδομάδες) ή 42 (6 εβδομάδες)
+  const daysInGrid = (() => {
+    // Υπολόγισε πόσες εβδομάδες καλύπτουν 1η..τελευταία (+ leading)
+    const after = (lastOfMonth - gridStart) / (1000 * 60 * 60 * 24) + 1; // ημέρες από gridStart έως lastOfMonth inclusive
+    return after > 35 ? 42 : 35;
+  })();
+
+  const days = Array.from({ length: daysInGrid }, (_, i) => addDays(gridStart, i));
+  const weeks = [];
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7));
+  }
+  return weeks;
+}
+
+export function getMonthRange(anchorDate) {
+  const first = startOfMonth(anchorDate);
+  const last = endOfMonth(anchorDate);
+  return {
+    fromYMD: formatYMDLocal(first).slice(0, 10),
+    toYMD: formatYMDLocal(last).slice(0, 10),
+    matrix: getMonthMatrix(anchorDate),
+    label: anchorDate.toLocaleDateString(undefined, { month: "long", year: "numeric" }),
+  };
 }
