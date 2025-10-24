@@ -18,7 +18,8 @@ export default function Dashboard() {
             <a href="/users">Users</a> ·{" "}
             <a href="/departments">Departments</a> ·{" "}
             <a href="/employees">Employees</a> ·{" "}
-            <a href="/schedule">Schedule</a>
+            <a href="/schedule">Schedule</a> ·{" "}
+            <a href="/timeoff-admin">Time Off Requests</a> {/* ✅ ΝΕΟ link */}
           </>
         )}
 

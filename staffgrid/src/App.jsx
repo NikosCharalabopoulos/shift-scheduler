@@ -14,6 +14,8 @@ import MySchedule from "./pages/employee/MySchedule";
 import MyTimeOff from "./pages/employee/MyTimeOff";
 import MyAvailability from "./pages/employee/MyAvailability";
 
+import TimeOffAdmin from "./pages/TimeOffAdmin";
+
 export default function App() {
   return (
     <Routes>
@@ -61,6 +63,15 @@ export default function App() {
             </RoleGuard>
           }
         />
+
+        <Route
+ path="/timeoff-admin"
+  element={
+    <RoleGuard allow={["OWNER", "MANAGER"]}>
+      <TimeOffAdmin />
+    </RoleGuard>
+  }
+/>
 
         {/* ✅ Employee Portal routes */}
         <Route
