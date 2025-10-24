@@ -133,7 +133,7 @@ const updateTimeOff = async (req, res) => {
 };
 
 // DELETE /api/timeoff/:id
-// Employee: μπορεί να διαγράψει ΜΟΝΟ δικό του και ΜΟΝΟ αν status=PENDING
+// ΠΑΝΤΑ: μόνο PENDING μπορεί να διαγραφεί (για όλους τους ρόλους)
 const deleteTimeOff = async (req, res) => {
   const { id } = req.params;
 
@@ -141,13 +141,16 @@ const deleteTimeOff = async (req, res) => {
     const existing = await TimeOff.findById(id);
     if (!existing) return res.status(404).json({ message: "Time-off request not found" });
 
+    // Αν είναι EMPLOYEE, κράτα και το self-guard
     if (isEmployee(req)) {
       if (!req.employeeId || String(existing.employee) !== String(req.employeeId)) {
         return res.status(403).json({ message: "Forbidden" });
       }
-      if (existing.status !== "PENDING") {
-        return res.status(422).json({ message: "Only PENDING requests can be deleted" });
-      }
+    }
+
+    // ✅ Επιτρέπεται διαγραφή ΜΟΝΟ όταν είναι PENDING (για όλους τους ρόλους)
+    if (existing.status !== "PENDING") {
+      return res.status(422).json({ message: "Only PENDING requests can be deleted" });
     }
 
     await TimeOff.findByIdAndDelete(id);

@@ -1,5 +1,6 @@
 // backend/src/controllers/shiftController.js
 const Shift = require("../models/shiftModel");
+const ShiftAssignment = require("../models/shiftAssignmentModel"); // ✅ για cascade unassign
 const { assertTimeOrder } = require("../services/conflictService");
 
 // GET /api/shifts
@@ -108,8 +109,16 @@ const deleteShift = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const deleted = await Shift.findByIdAndDelete(id);
-    if (!deleted) return res.status(404).json({ message: "Shift not found" });
+    const existing = await Shift.findById(id);
+    if (!existing) return res.status(404).json({ message: "Shift not found" });
+
+    const removed = await Shift.findByIdAndDelete(id);
+
+    // ✅ Cascade unassign: σβήσε όλα τα assignments που δείχνουν σε αυτό το shift
+    if (removed) {
+      await ShiftAssignment.deleteMany({ shift: id });
+    }
+
     res.status(200).json({ message: "Shift deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error deleting shift", error });
