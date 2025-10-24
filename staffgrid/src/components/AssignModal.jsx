@@ -6,20 +6,23 @@ export default function AssignModal({ open, onClose, onChanged, shift }) {
   const [assignments, setAssignments] = useState([]);
   const [employeeId, setEmployeeId] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [loadingLists, setLoadingLists] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !shift?._id) return;
     setError("");
+    setLoadingLists(true);
     Promise.all([
       api.get("/employees"),
-      api.get("/shift-assignments", { params: { shift: shift?._id } })
+      api.get("/shift-assignments", { params: { shift: shift._id } }),
     ])
       .then(([emps, asg]) => {
         setEmployees(emps.data || []);
         setAssignments(asg.data || []);
       })
-      .catch(() => {});
+      .catch((e) => setError(getErrorMessage(e)))
+      .finally(() => setLoadingLists(false));
   }, [open, shift?._id]);
 
   const assignedIds = useMemo(
@@ -41,8 +44,9 @@ export default function AssignModal({ open, onClose, onChanged, shift }) {
       await api.post("/shift-assignments", {
         shift: shift._id,
         employee: employeeId,
-        // 🚫 ΜΗ στέλνεις assignedBy — το βάζει ο server από το JWT
+        // assignedBy το βάζει ο server από το JWT
       });
+      alert("Assigned.");
       setEmployeeId("");
       onChanged?.();
       onClose?.();
@@ -54,10 +58,14 @@ export default function AssignModal({ open, onClose, onChanged, shift }) {
   }
 
   async function unassign(assignmentId) {
+    const ok = confirm("Unassign this employee from the shift?");
+    if (!ok) return;
+
     setSubmitting(true);
     setError("");
     try {
       await api.delete(`/shift-assignments/${assignmentId}`);
+      alert("Unassigned.");
       onChanged?.();
       onClose?.();
     } catch (err) {
@@ -68,74 +76,83 @@ export default function AssignModal({ open, onClose, onChanged, shift }) {
   }
 
   return (
-    <div style={styles.backdrop} onClick={onClose}>
+    <div style={styles.backdrop} onClick={() => !submitting && onClose?.()}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
         <h3 style={{ marginTop: 0 }}>
           Assignments — {shift.startTime}–{shift.endTime}
         </h3>
 
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>Assigned</div>
-          {assignments.length === 0 ? (
-            <div style={{ color: "#64748b" }}>No one assigned yet.</div>
-          ) : (
-            <ul style={{ margin: 0, paddingLeft: 18 }}>
-              {assignments.map((a) => (
-                <li
-                  key={a._id}
-                  style={{ display: "flex", justifyContent: "space-between", gap: 8 }}
+        {loadingLists ? (
+          <div style={{ color: "#64748b" }}>Loading…</div>
+        ) : (
+          <>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Assigned</div>
+              {assignments.length === 0 ? (
+                <div style={{ color: "#64748b" }}>No one assigned yet.</div>
+              ) : (
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {assignments.map((a) => (
+                    <li
+                      key={a._id}
+                      style={{ display: "flex", justifyContent: "space-between", gap: 8 }}
+                    >
+                      <span>
+                        {a.employee?.user?.fullName}{" "}
+                        <span style={{ color: "#94a3b8" }}>
+                          ({a.employee?.user?.email})
+                        </span>
+                      </span>
+                      <button
+                        style={styles.dangerBtn}
+                        onClick={() => unassign(a._id)}
+                        disabled={submitting}
+                        title="Unassign"
+                      >
+                        {submitting ? "..." : "Unassign"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6 }}>Assign someone</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <select
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  style={styles.input}
+                  disabled={submitting}
                 >
-                  <span>
-                    {a.employee?.user?.fullName}{" "}
-                    <span style={{ color: "#94a3b8" }}>
-                      ({a.employee?.user?.email})
-                    </span>
-                  </span>
-                  <button
-                    style={styles.dangerBtn}
-                    onClick={() => unassign(a._id)}
-                    disabled={submitting}
-                  >
-                    Unassign
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  <option value="">Select employee…</option>
+                  {availableEmployees.map((e) => (
+                    <option key={e._id} value={e._id}>
+                      {e.user?.fullName} — {e.user?.email}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  style={styles.primaryBtn}
+                  onClick={assign}
+                  disabled={submitting || !employeeId}
+                  title="Assign"
+                >
+                  {submitting ? "..." : "Assign"}
+                </button>
+              </div>
+            </div>
 
-        <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12 }}>
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>Assign someone</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <select
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              style={styles.input}
-            >
-              <option value="">Select employee…</option>
-              {availableEmployees.map((e) => (
-                <option key={e._id} value={e._id}>
-                  {e.user?.fullName} — {e.user?.email}
-                </option>
-              ))}
-            </select>
-            <button
-              style={styles.primaryBtn}
-              onClick={assign}
-              disabled={submitting || !employeeId}
-            >
-              Assign
-            </button>
-          </div>
-        </div>
+            {error && <div style={{ color: "#ef4444", marginTop: 10 }}>{error}</div>}
 
-        {error && <div style={{ color: "#ef4444", marginTop: 10 }}>{error}</div>}
-
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-          <button style={styles.secondaryBtn} onClick={onClose} disabled={submitting}>
-            Close
-          </button>
-        </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+              <button style={styles.secondaryBtn} onClick={onClose} disabled={submitting}>
+                Close
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

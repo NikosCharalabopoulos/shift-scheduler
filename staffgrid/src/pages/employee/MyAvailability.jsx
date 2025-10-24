@@ -16,7 +16,6 @@ const WEEKDAY_LABEL = {
 
 // Δίνει το offset (μέρες) από Monday-start για ένα weekday (0..6, Sunday=0)
 function weekdayOffsetFromMonday(weekday) {
-  // Monday=1 → 0, Tuesday=2 → 1, ..., Sunday=0 → 6
   return weekday === 0 ? 6 : weekday - 1;
 }
 
@@ -28,7 +27,7 @@ export default function MyAvailability() {
   const [editing, setEditing] = useState(null);
   const [busyId, setBusyId] = useState("");
 
-  // ✅ ΝΕΟ: Reference week (για να προβάλλουμε ακριβείς ημερομηνίες)
+  // Reference week (για να προβάλλουμε ακριβείς ημερομηνίες)
   const [refYMD, setRefYMD] = useState(() => formatYMDLocal(new Date()));
   const mondayOfRefWeek = useMemo(() => startOfWeek(new Date(refYMD)), [refYMD]);
 
@@ -54,19 +53,23 @@ export default function MyAvailability() {
   async function onCreateOrUpdate(payload, id) {
     if (id) {
       await updateItem(id, payload);
+      alert("Availability updated.");
     } else {
       await createItem(payload);
+      alert("Availability created.");
     }
   }
 
   async function onCreateMany(payloads) {
     await createMany(payloads);
+    alert("Availability created for selected weekdays.");
   }
 
   async function onDelete(id) {
     setBusyId(id);
     try {
       await deleteItem(id);
+      alert("Availability deleted.");
     } finally {
       setBusyId("");
     }
@@ -83,6 +86,7 @@ export default function MyAvailability() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 280 }}
+          disabled={loading}
         />
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -93,10 +97,12 @@ export default function MyAvailability() {
             onChange={(e) => setRefYMD(e.target.value)}
             style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" }}
             title="Pick any date — θα χρησιμοποιηθεί η εβδομάδα (Δευτέρα–Κυριακή) που την περιέχει"
+            disabled={loading}
           />
           <button
-            style={primaryBtn}
-            onClick={() => { setEditing(null); setOpenForm(true); }}
+            style={{ ...primaryBtn, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
+            onClick={() => { if (!loading) { setEditing(null); setOpenForm(true); } }}
+            disabled={loading}
           >
             New Availability
           </button>
@@ -115,7 +121,6 @@ export default function MyAvailability() {
             <thead>
               <tr>
                 <th style={{ width: 140 }}>Weekday</th>
-                {/* ✅ ΝΕΟ: ακριβής ημερομηνία αυτής της μέρας μέσα στην επιλεγμένη εβδομάδα */}
                 <th style={{ width: 180 }}>Date (in selected week)</th>
                 <th style={{ width: 160 }}>Start</th>
                 <th style={{ width: 160 }}>End</th>
@@ -141,8 +146,9 @@ export default function MyAvailability() {
                         <button
                           style={secondaryBtn}
                           onClick={() => { setEditing(r); setOpenForm(true); }}
+                          disabled={busyId === r._id || loading}
                         >
-                          Edit
+                          {busyId === r._id ? "..." : "Edit"}
                         </button>
                         <button
                           style={{
@@ -150,7 +156,7 @@ export default function MyAvailability() {
                             opacity: busyId === r._id ? 0.6 : 1,
                             cursor: busyId === r._id ? "wait" : "pointer"
                           }}
-                          disabled={busyId === r._id}
+                          disabled={busyId === r._id || loading}
                           onClick={() => {
                             const ok = confirm(`Delete ${WEEKDAY_LABEL[r.weekday] || r.weekday} ${r.startTime}-${r.endTime}?`);
                             if (ok) onDelete(r._id);

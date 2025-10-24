@@ -15,6 +15,12 @@ export default function Schedule({ onAnyChange }) {
   const [editingShift, setEditingShift] = useState(null);
   const [assignFor, setAssignFor] = useState(null);
 
+  // per-shift busy for destructive actions (delete)
+  const [busyShift, setBusyShift] = useState({});
+  const isBusy = (id) => !!busyShift[id];
+  const setBusy = (id, on) =>
+    setBusyShift((b) => (on ? { ...b, [id]: true } : (b[id] && delete b[id], { ...b })));
+
   useEffect(() => {
     api
       .get("/departments")
@@ -48,15 +54,9 @@ export default function Schedule({ onAnyChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [departmentId, weekStart]);
 
-  function nextWeek() {
-    setWeekStart((prev) => addDays(prev, 7));
-  }
-  function prevWeek() {
-    setWeekStart((prev) => addDays(prev, -7));
-  }
-  function todayWeek() {
-    setWeekStart(startOfWeek(new Date()));
-  }
+  function nextWeek() { setWeekStart((prev) => addDays(prev, 7)); }
+  function prevWeek() { setWeekStart((prev) => addDays(prev, -7)); }
+  function todayWeek() { setWeekStart(startOfWeek(new Date())); }
 
   const shiftsByDate = useMemo(() => {
     const map = {};
@@ -71,14 +71,19 @@ export default function Schedule({ onAnyChange }) {
   }, [shifts]);
 
   async function deleteShift(id) {
+    if (isBusy(id)) return;
     const ok = confirm("Delete this shift?");
     if (!ok) return;
+    setBusy(id, true);
     try {
       await api.delete(`/shifts/${id}`);
       await fetchShifts();
-      onAnyChange?.(); // ✅ ενημέρωσε το Month
+      onAnyChange?.(); // ενημέρωσε π.χ. Month
+      alert("Shift deleted.");
     } catch (e) {
       alert(getErrorMessage(e));
+    } finally {
+      setBusy(id, false);
     }
   }
 
@@ -86,14 +91,14 @@ export default function Schedule({ onAnyChange }) {
   async function handleShiftSaved() {
     setOpenShiftForm(false);
     await fetchShifts();
-    onAnyChange?.(); // ✅ ενημέρωσε το Month
+    onAnyChange?.();
   }
 
   // helper για AssignModal αλλαγές (assign/unassign)
   async function handleAssignChanged() {
     setAssignFor(null);
     await fetchShifts();
-    onAnyChange?.(); // ✅ ενημέρωσε το Month
+    onAnyChange?.();
   }
 
   return (
@@ -112,17 +117,12 @@ export default function Schedule({ onAnyChange }) {
           <span style={{ marginRight: 6 }}>Department</span>
           <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
             {departments.map((d) => (
-              <option key={d._id} value={d._id}>
-                {d.name}
-              </option>
+              <option key={d._id} value={d._id}>{d.name}</option>
             ))}
           </select>
         </label>
         <button
-          onClick={() => {
-            setEditingShift(null);
-            setOpenShiftForm(true);
-          }}
+          onClick={() => { setEditingShift(null); setOpenShiftForm(true); }}
           style={{ padding: "8px 10px", borderRadius: 8, border: 0, background: "#22c55e", color: "black", fontWeight: 600 }}
         >
           New Shift
@@ -133,13 +133,7 @@ export default function Schedule({ onAnyChange }) {
       {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 12,
-          marginTop: 16,
-          alignItems: "start",
-        }}
+        style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 12, marginTop: 16, alignItems: "start" }}
       >
         {days.map((d) => {
           const key = formatYMDLocal(d);
@@ -151,39 +145,42 @@ export default function Schedule({ onAnyChange }) {
                 <div style={{ color: "#94a3b8" }}>No shifts</div>
               ) : (
                 <div style={{ display: "grid", gap: 8 }}>
-                  {list.map((s) => (
-                    <div key={s._id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 10 }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>
-                            {s.startTime}–{s.endTime}
+                  {list.map((s) => {
+                    const rowBusy = isBusy(s._id);
+                    return (
+                      <div key={s._id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                          <div>
+                            <div style={{ fontWeight: 600 }}>
+                              {s.startTime}–{s.endTime}
+                            </div>
+                            {s.notes && <div style={{ color: "#64748b", fontSize: 13 }}>{s.notes}</div>}
+                            {rowBusy && <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Processing…</div>}
                           </div>
-                          {s.notes && <div style={{ color: "#64748b", fontSize: 13 }}>{s.notes}</div>}
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              onClick={() => { setEditingShift(s); setOpenShiftForm(true); }}
+                              disabled={rowBusy}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteShift(s._id)}
+                              disabled={rowBusy}
+                              style={{ background: rowBusy ? "#fca5a5" : "#ef4444", color: "white", border: 0, borderRadius: 6, padding: "6px 8px" }}
+                            >
+                              {rowBusy ? "Deleting…" : "Delete"}
+                            </button>
+                          </div>
                         </div>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button
-                            onClick={() => {
-                              setEditingShift(s);
-                              setOpenShiftForm(true);
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => deleteShift(s._id)}
-                            style={{ background: "#ef4444", color: "white", border: 0, borderRadius: 6, padding: "6px 8px" }}
-                          >
-                            Delete
+                        <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+                          <button onClick={() => setAssignFor(s)} style={{ padding: "6px 8px", borderRadius: 6 }} disabled={rowBusy}>
+                            Assign
                           </button>
                         </div>
                       </div>
-                      <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-                        <button onClick={() => setAssignFor(s)} style={{ padding: "6px 8px", borderRadius: 6 }}>
-                          Assign
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -194,7 +191,7 @@ export default function Schedule({ onAnyChange }) {
       <ShiftFormModal
         open={openShiftForm}
         onClose={() => setOpenShiftForm(false)}
-        onSaved={handleShiftSaved}              
+        onSaved={handleShiftSaved}
         initial={editingShift}
         departmentId={departmentId}
         date={undefined}
@@ -203,7 +200,7 @@ export default function Schedule({ onAnyChange }) {
       <AssignModal
         open={Boolean(assignFor)}
         onClose={() => setAssignFor(null)}
-        onChanged={handleAssignChanged}         
+        onChanged={handleAssignChanged}
         shift={assignFor}
       />
     </div>

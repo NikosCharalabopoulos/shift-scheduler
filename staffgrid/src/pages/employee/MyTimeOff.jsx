@@ -47,17 +47,19 @@ export default function MyTimeOff() {
 
   async function onCreateOrUpdate(payload, id) {
     if (id) {
-      // edit επιτρέπεται μόνο για PENDING (UI ήδη περιορίζει)
       await updateItem(id, payload);
+      alert("Request updated.");
     } else {
       await createItem(payload);
+      alert("Request created.");
     }
   }
 
   async function onDelete(id) {
     setBusyId(id);
     try {
-      await deleteItem(id); // backend θα μπλοκάρει μη-PENDING
+      await deleteItem(id); // backend μπλοκάρει μη-PENDING
+      alert("Request deleted.");
     } finally {
       setBusyId("");
     }
@@ -73,10 +75,12 @@ export default function MyTimeOff() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 280 }}
+          disabled={loading}
         />
         <button
-          style={primaryBtn}
-          onClick={() => { setEditing(null); setOpenForm(true); }}
+          style={{ ...primaryBtn, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
+          onClick={() => { if (!loading) { setEditing(null); setOpenForm(true); } }}
+          disabled={loading}
         >
           New Request
         </button>
@@ -98,7 +102,7 @@ export default function MyTimeOff() {
                 <th style={{ width: 140 }}>Status</th>
                 <th style={{ width: 320 }}>Reason</th>
                 <th style={{ width: 200 }}>Created</th>
-                <th style={{ width: 160 }}></th>
+                <th style={{ width: 180 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -107,35 +111,39 @@ export default function MyTimeOff() {
                 const end = new Date(r.endDate).toLocaleDateString();
                 const created = new Date(r.createdAt).toLocaleString();
                 const isPending = r.status === "PENDING";
+                const rowBusy = busyId === r._id;
                 return (
                   <tr key={r._id}>
                     <td>{r.type}</td>
                     <td>{start} — {end}</td>
-                    <td><StatusBadge status={r.status} /></td>
+                    <td>
+                      <StatusBadge status={r.status} />
+                      {rowBusy && <span style={{ marginLeft: 8, fontSize: 12, color: "#64748b" }}>Processing…</span>}
+                    </td>
                     <td>{r.reason || <span style={{ color: "#94a3b8" }}>—</span>}</td>
                     <td>{created}</td>
                     <td>
                       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                         <button
-                          style={{ ...secondaryBtn, opacity: isPending ? 1 : 0.5, cursor: isPending ? "pointer" : "not-allowed" }}
-                          disabled={!isPending}
+                          style={{ ...secondaryBtn, opacity: isPending && !rowBusy ? 1 : 0.5, cursor: isPending && !rowBusy ? "pointer" : "not-allowed" }}
+                          disabled={!isPending || rowBusy}
                           onClick={() => { setEditing(r); setOpenForm(true); }}
                         >
-                          Edit
+                          {rowBusy ? "..." : "Edit"}
                         </button>
                         <button
                           style={{
                             ...dangerBtn,
-                            opacity: isPending && busyId !== r._id ? 1 : 0.6,
-                            cursor: isPending && busyId !== r._id ? "pointer" : "not-allowed"
+                            opacity: isPending && !rowBusy ? 1 : 0.6,
+                            cursor: isPending && !rowBusy ? "pointer" : "not-allowed"
                           }}
-                          disabled={!isPending || busyId === r._id}
+                          disabled={!isPending || rowBusy}
                           onClick={() => {
                             const ok = confirm(`Delete this ${r.type} request (${start} — ${end})?`);
                             if (ok) onDelete(r._id);
                           }}
                         >
-                          {busyId === r._id ? "Deleting…" : "Delete"}
+                          {rowBusy ? "Deleting…" : "Delete"}
                         </button>
                       </div>
                     </td>

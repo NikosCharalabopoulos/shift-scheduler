@@ -26,12 +26,14 @@ export default function useMyAvailability() {
 
   const createItem = async (payload) => {
     await api.post("/availability", payload);
+    await fetchAll(); // ✅ refetch ώστε να φανούν αμέσως οι εγγραφές
   };
 
-  // ✅ ΝΕΟ: batch create (ένα POST ανά selected weekday)
+  // batch create (ένα POST ανά selected weekday)
   const createMany = async (payloads) => {
     for (const p of payloads) {
-      await createItem(p);
+      // eslint-disable-next-line no-await-in-loop
+      await api.post("/availability", p);
     }
     await fetchAll();
   };
@@ -51,7 +53,7 @@ export default function useMyAvailability() {
     loading,
     err,
     createItem,
-    createMany, // ✅
+    createMany,
     updateItem,
     deleteItem,
     refetch: fetchAll
