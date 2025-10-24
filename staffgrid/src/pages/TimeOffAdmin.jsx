@@ -20,6 +20,12 @@ export default function TimeOffAdmin() {
   // decline modal
   const [declineFor, setDeclineFor] = useState(null);
 
+  // per-row action busy state
+  const [busy, setBusy] = useState({}); // { [id]: true }
+  const isRowBusy = (id) => !!busy[id];
+  const setRowBusy = (id, on) =>
+    setBusy((b) => (on ? { ...b, [id]: true } : (b[id] && delete b[id], { ...b })));
+
   useEffect(() => {
     api.get("/departments").then(r => setDepartments(r.data || [])).catch(()=>{});
   }, []);
@@ -64,32 +70,52 @@ export default function TimeOffAdmin() {
   }, [rows, departmentId, q]);
 
   async function approve(id) {
+    if (isRowBusy(id)) return;
+    setRowBusy(id, true);
     try {
       await api.patch(`/timeoff/${id}`, { status: "APPROVED" });
       await fetchList();
+      alert("Time-off approved.");
     } catch (e) {
       alert(getErrorMessage(e));
+    } finally {
+      setRowBusy(id, false);
     }
   }
 
   async function decline(id, reason) {
+    if (isRowBusy(id)) return;
+    setRowBusy(id, true);
     try {
       await api.patch(`/timeoff/${id}`, { status: "DECLINED", ...(reason ? { reason } : {}) });
       await fetchList();
+      alert("Time-off declined.");
     } catch (e) {
       alert(getErrorMessage(e));
+    } finally {
+      setRowBusy(id, false);
+      setDeclineFor(null);
     }
   }
 
   async function remove(id, currentStatus) {
-    if (currentStatus !== "PENDING") return;
+    if (currentStatus !== "PENDING") {
+      alert("Only PENDING requests can be deleted.");
+      return;
+    }
+    if (isRowBusy(id)) return;
     const ok = confirm("Delete this pending request?");
     if (!ok) return;
+
+    setRowBusy(id, true);
     try {
       await api.delete(`/timeoff/${id}`);
       await fetchList();
+      alert("Time-off deleted.");
     } catch (e) {
       alert(getErrorMessage(e));
+    } finally {
+      setRowBusy(id, false);
     }
   }
 
@@ -101,7 +127,7 @@ export default function TimeOffAdmin() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginTop: 8 }}>
         <label>
           <div style={lbl}>Status</div>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} style={input}>
+          <select value={status} onChange={(e) => setStatus(e.target.value)} style={input} disabled={loading}>
             <option value="">All</option>
             {STATUS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -109,17 +135,17 @@ export default function TimeOffAdmin() {
 
         <label>
           <div style={lbl}>From</div>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={input} />
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={input} disabled={loading} />
         </label>
 
         <label>
           <div style={lbl}>To</div>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={input} />
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={input} disabled={loading} />
         </label>
 
         <label>
           <div style={lbl}>Department</div>
-          <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} style={input}>
+          <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} style={input} disabled={loading}>
             <option value="">All</option>
             {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
           </select>
@@ -132,10 +158,13 @@ export default function TimeOffAdmin() {
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search…"
             style={input}
+            disabled={loading}
           />
         </label>
 
-        <button onClick={fetchList} style={refreshBtn}>Refresh</button>
+        <button onClick={fetchList} style={refreshBtn} disabled={loading}>
+          {loading ? "Refreshing…" : "Refresh"}
+        </button>
       </div>
 
       {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
@@ -152,7 +181,7 @@ export default function TimeOffAdmin() {
               <th>Dates</th>
               <th>Status</th>
               <th>Reason</th>
-              <th style={{ width: 220 }}>Actions</th>
+              <th style={{ width: 260 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -163,61 +192,66 @@ export default function TimeOffAdmin() {
                 </td>
               </tr>
             ) : (
-              filtered.map((r) => (
-                <tr key={r._id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{r.employee?.user?.fullName || "—"}</div>
-                    <div style={{ color: "#64748b", fontSize: 12 }}>{r.employee?.user?.email || "—"}</div>
-                  </td>
-                  <td>{r.employee?.department?.name || "—"}</td>
-                  <td>{r.type || "—"}</td>
-                  <td>
-                    {(r.startDate || r.endDate) ? (
-                      <>
-                        {new Date(r.startDate).toLocaleDateString()} – {new Date(r.endDate).toLocaleDateString()}
-                      </>
-                    ) : "—"}
-                  </td>
-                  <td>
-                    <span style={{ ...badge, ...(r.status === "APPROVED" ? badgeGreen : r.status === "DECLINED" ? badgeRed : badgeYellow) }}>
-                      {r.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div title={r.reason || ""} style={{ maxWidth: 280, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {r.reason || <span style={{ color: "#94a3b8" }}>—</span>}
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button
-                        style={{ ...btn, ...(r.status === "PENDING" ? btnPrimary : btnDisabled) }}
-                        disabled={r.status !== "PENDING"}
-                        onClick={() => approve(r._id)}
-                        title="Approve"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        style={{ ...btn, ...(r.status === "PENDING" ? btnWarning : btnDisabled) }}
-                        disabled={r.status !== "PENDING"}
-                        onClick={() => setDeclineFor(r)}
-                        title="Decline"
-                      >
-                        Decline
-                      </button>
-                      <button
-                        style={{ ...btn, ...(r.status === "PENDING" ? btnDanger : btnDisabled) }}
-                        disabled={r.status !== "PENDING"}
-                        onClick={() => remove(r._id, r.status)}
-                        title="Delete"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              filtered.map((r) => {
+                const rowBusy = isRowBusy(r._id);
+                const notPending = r.status !== "PENDING";
+                return (
+                  <tr key={r._id}>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{r.employee?.user?.fullName || "—"}</div>
+                      <div style={{ color: "#64748b", fontSize: 12 }}>{r.employee?.user?.email || "—"}</div>
+                    </td>
+                    <td>{r.employee?.department?.name || "—"}</td>
+                    <td>{r.type || "—"}</td>
+                    <td>
+                      {(r.startDate || r.endDate) ? (
+                        <>
+                          {new Date(r.startDate).toLocaleDateString()} – {new Date(r.endDate).toLocaleDateString()}
+                        </>
+                      ) : "—"}
+                    </td>
+                    <td>
+                      <span style={{ ...badge, ...(r.status === "APPROVED" ? badgeGreen : r.status === "DECLINED" ? badgeRed : badgeYellow) }}>
+                        {r.status}
+                      </span>
+                      {rowBusy && <span style={{ marginLeft: 8, fontSize: 12, color: "#64748b" }}>Processing…</span>}
+                    </td>
+                    <td>
+                      <div title={r.reason || ""} style={{ maxWidth: 280, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {r.reason || <span style={{ color: "#94a3b8" }}>—</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button
+                          style={{ ...btn, ...(notPending || rowBusy ? btnDisabled : btnPrimary) }}
+                          disabled={notPending || rowBusy}
+                          onClick={() => approve(r._id)}
+                          title="Approve"
+                        >
+                          {rowBusy ? "..." : "Approve"}
+                        </button>
+                        <button
+                          style={{ ...btn, ...(notPending || rowBusy ? btnDisabled : btnWarning) }}
+                          disabled={notPending || rowBusy}
+                          onClick={() => setDeclineFor(r)}
+                          title="Decline"
+                        >
+                          {rowBusy ? "..." : "Decline"}
+                        </button>
+                        <button
+                          style={{ ...btn, ...(notPending || rowBusy ? btnDisabled : btnDanger) }}
+                          disabled={notPending || rowBusy}
+                          onClick={() => remove(r._id, r.status)}
+                          title="Delete"
+                        >
+                          {rowBusy ? "..." : "Delete"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

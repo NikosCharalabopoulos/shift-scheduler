@@ -45,6 +45,13 @@ router.put(
   updateTimeOff
 );
 
+router.patch(
+  "/:id",
+  forbidMutatingForeignResource(getTimeOffOwner),
+  enforceSelfOnBody("employee"),
+  updateTimeOff
+);
+
 // DELETE: EMPLOYEE → μόνο αν είναι δικό του (κανόνες status μένουν στον controller)
 router.delete(
   "/:id",
