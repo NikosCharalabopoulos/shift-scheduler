@@ -8,6 +8,7 @@ import { getMonthRange, addMonths } from "../utils/date";
 import { api, getErrorMessage } from "../lib/api";
 import useAssignmentsRange from "../hooks/useAssignmentsRange";
 import useShiftsRange from "../hooks/useShiftsRange";
+import ViewToggle from "../components/ViewToggle"; 
 
 /* -------- QuickAssignModal (Assign/Unassign + Delete Shift) -------- */
 function QuickAssignModal({ open, onClose, shift, departmentId, onDone }) {
@@ -263,22 +264,18 @@ export default function ScheduleWrapper() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1 style={{ marginBottom: 8 }}>Schedule</h1>
+   <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  }}
+>
+  <h1 style={{ margin: 0 }}>Schedule</h1>
+  <ViewToggle value={view} onChange={setView} />
+</div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-        <button
-          onClick={() => setView("WEEK")}
-          style={{ ...toggleBtn, background: view === "WEEK" ? "#0ea5e9" : "white", color: view === "WEEK" ? "white" : "black" }}
-        >
-          Week
-        </button>
-        <button
-          onClick={() => setView("MONTH")}
-          style={{ ...toggleBtn, background: view === "MONTH" ? "#0ea5e9" : "white", color: view === "MONTH" ? "white" : "black" }}
-        >
-          Month
-        </button>
-      </div>
 
       {view === "WEEK" ? (
         <WeekSchedule onAnyChange={refetchBoth} />

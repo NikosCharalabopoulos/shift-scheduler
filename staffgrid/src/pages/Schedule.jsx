@@ -3,6 +3,7 @@ import { api, getErrorMessage } from "../lib/api";
 import { startOfWeek, addDays, formatYMDLocal, formatShort } from "../utils/date";
 import ShiftFormModal from "../components/ShiftFormModal";
 import AssignModal from "../components/AssignModal";
+import WeekNav from "../components/WeekNav";
 
 // MUI
 import {
@@ -73,6 +74,15 @@ export default function Schedule({ onAnyChange }) {
   function prevWeek() { setWeekStart((prev) => addDays(prev, -7)); }
   function todayWeek() { setWeekStart(startOfWeek(new Date())); }
 
+  // Ετικέτα εβδομάδας (ίδια λογική με employee view)
+  const weekLabel = useMemo(() => {
+    const end = addDays(weekStart, 6);
+    const sameMonth = weekStart.getMonth() === end.getMonth();
+    return sameMonth
+      ? `${weekStart.toLocaleDateString(undefined, { month: "short" })} ${weekStart.getDate()}–${end.getDate()}, ${end.getFullYear()}`
+      : `${weekStart.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${end.getFullYear()}`;
+  }, [weekStart]);
+
   const shiftsByDate = useMemo(() => {
     const map = {};
     for (const s of shifts) {
@@ -116,15 +126,22 @@ export default function Schedule({ onAnyChange }) {
 
   return (
     <Box p={3}>
-      {/* Header */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="h5" fontWeight={700}>Schedule</Typography>
-        <Stack direction="row" spacing={1}>
-          <Button variant="outlined" onClick={prevWeek}>← Prev</Button>
-          <Button variant="outlined" onClick={todayWeek}>Today</Button>
-          <Button variant="outlined" onClick={nextWeek}>Next →</Button>
-        </Stack>
-      </Stack>
+      {/* Header: Title + common WeekNav */}
+      <Stack
+  direction={{ xs: "column", sm: "row" }}
+  alignItems={{ xs: "center", sm: "center" }}
+  justifyContent="center"
+  spacing={1.5}
+  sx={{ width: "100%", mt: 1 }}
+>
+  <WeekNav
+    label={weekLabel}
+    onPrev={prevWeek}
+    onToday={todayWeek}
+    onNext={nextWeek}
+  />
+</Stack>
+
 
       {/* Controls */}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "stretch", sm: "center" }} sx={{ mt: 2 }}>

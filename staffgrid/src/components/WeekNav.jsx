@@ -1,21 +1,56 @@
-// staffgrid/src/components/WeekNav.js
 import React from "react";
+import { Stack, Button, Typography } from "@mui/material";
+import { ArrowBack, ArrowForward, Today } from "@mui/icons-material";
 
 export default function WeekNav({ label, onPrev, onToday, onNext }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <button onClick={onPrev} style={btnStyle}>&larr; Prev</button>
-      <button onClick={onToday} style={btnStyle}>Today</button>
-      <button onClick={onNext} style={btnStyle}>Next &rarr;</button>
-      <div style={{ fontWeight: 700, marginLeft: 8 }}>{label}</div>
-    </div>
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={1.5}
+      sx={{
+        mb: 1.5,
+        flexWrap: "wrap",
+      }}
+    >
+      <Stack direction="row" spacing={1}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<ArrowBack fontSize="small" />}
+          onClick={onPrev}
+        >
+          Prev
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<Today fontSize="small" />}
+          onClick={onToday}
+        >
+          Today
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          endIcon={<ArrowForward fontSize="small" />}
+          onClick={onNext}
+        >
+          Next
+        </Button>
+      </Stack>
+
+      <Typography
+        variant="subtitle1"
+        sx={{
+          fontWeight: 700,
+          ml: 1,
+          minWidth: 200,
+          textAlign: "center",
+        }}
+      >
+        {label}
+      </Typography>
+    </Stack>
   );
 }
-
-const btnStyle = {
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  background: "white",
-  cursor: "pointer",
-};

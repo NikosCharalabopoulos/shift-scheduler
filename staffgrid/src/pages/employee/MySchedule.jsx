@@ -3,132 +3,100 @@ import React, { useMemo, useState } from "react";
 import {
   startOfWeek,
   addDays,
-  formatYMDLocal,
-  getMonthRange,
   addMonths,
+  getMonthRange,
+  formatYMDLocal,
+  getWeekLabel,
 } from "../../utils/date";
 import useMyAssignments from "../../hooks/useMyAssignments";
+
+// Components
 import WeekNav from "../../components/WeekNav";
 import MonthNav from "../../components/MonthNav";
 import MyScheduleGrid from "../../components/MyScheduleGrid";
 import MyMonthGrid from "../../components/MyMonthGrid";
+import ViewToggle from "../../components/ViewToggle";
 
 // MUI
-import {
-  Box,
-  Stack,
-  Typography,
-  ToggleButtonGroup,
-  ToggleButton,
-  Paper,
-  CircularProgress,
-} from "@mui/material";
-
-function getWeekState(anchor) {
-  const start = startOfWeek(anchor);
-  const end = addDays(start, 6);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
-  const sameMonth = start.getMonth() === end.getMonth();
-  const label = sameMonth
-    ? `${start.toLocaleDateString(undefined, { month: "short" })} ${start.getDate()}–${end.getDate()}, ${end.getFullYear()}`
-    : `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${end.getFullYear()}`;
-  return {
-    start,
-    end,
-    fromYMD: formatYMDLocal(start),
-    toYMD: formatYMDLocal(end),
-    days,
-    label,
-  };
-}
+import { Box, Stack, Typography } from "@mui/material";
 
 export default function MySchedule() {
   const [anchor, setAnchor] = useState(() => new Date());
   const [view, setView] = useState("WEEK"); // "WEEK" | "MONTH"
 
   // Week state
-  const week = useMemo(() => getWeekState(anchor), [anchor]);
+  const weekStart = useMemo(() => startOfWeek(anchor), [anchor]);
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
+    [weekStart]
+  );
+  const weekLabel = useMemo(() => getWeekLabel(anchor), [anchor]);
 
   // Month state
   const month = useMemo(() => getMonthRange(anchor), [anchor]);
 
-  // Επιλογή range ανάλογα με την προβολή
-  const fromYMD = view === "WEEK" ? week.fromYMD : month.fromYMD;
-  const toYMD = view === "WEEK" ? week.toYMD : month.toYMD;
+  // Επιλογή range ανά προβολή
+  const fromYMD = view === "WEEK" ? formatYMDLocal(weekDays[0]) : month.fromYMD;
+  const toYMD   = view === "WEEK" ? formatYMDLocal(weekDays[6]) : month.toYMD;
 
   const { data, loading, err } = useMyAssignments(fromYMD, toYMD);
 
   return (
     <Box p={2}>
-      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between" gap={1}>
-        <Typography variant="h5" fontWeight={700}>My Schedule</Typography>
+      {/* Header: Title · Week/Month Nav (center) · View toggle (right) */}
+     {/* Header row: Title (left) + View toggle (right) */}
+<Stack
+  direction="row"
+  alignItems="center"
+  justifyContent="space-between"
+  sx={{ mb: 1.5 }}
+>
+  <Typography variant="h5" fontWeight={700}>My Schedule</Typography>
+  <ViewToggle value={view} onChange={setView} />
+</Stack>
 
-        <ToggleButtonGroup
-          size="small"
-          color="primary"
-          value={view}
-          exclusive
-          onChange={(_, val) => { if (val) setView(val); }}
-        >
-          <ToggleButton value="WEEK">Week</ToggleButton>
-          <ToggleButton value="MONTH">Month</ToggleButton>
-        </ToggleButtonGroup>
-      </Stack>
+{/* Navigation row: Week/Month label + prev/today/next (centered, one line lower) */}
+<Box
+  sx={{
+    mt: 2,              // μία “γραμμή” πιο κάτω
+    mb: 2,              // λίγο κενό πριν το grid
+    display: "flex",
+    justifyContent: "center",
+  }}
+>
+  {view === "WEEK" ? (
+    <WeekNav
+      label={weekLabel}
+      onPrev={() => setAnchor((d) => addDays(d, -7))}
+      onToday={() => setAnchor(new Date())}
+      onNext={() => setAnchor((d) => addDays(d, +7))}
+    />
+  ) : (
+    <MonthNav
+      label={month.label}
+      onPrev={() => setAnchor((d) => addMonths(d, -1))}
+      onToday={() => setAnchor(new Date())}
+      onNext={() => setAnchor((d) => addMonths(d, +1))}
+    />
+  )}
+</Box>
 
-      {view === "WEEK" ? (
-        <>
-          <Box mt={2}>
-            <WeekNav
-              label={week.label}
-              onPrev={() => setAnchor((d) => addDays(d, -7))}
-              onToday={() => setAnchor(new Date())}
-              onNext={() => setAnchor((d) => addDays(d, +7))}
-            />
-          </Box>
 
-          {loading && (
-            <Stack direction="row" alignItems="center" gap={1.5} mt={2}>
-              <CircularProgress size={20} />
-              <Typography>Loading…</Typography>
-            </Stack>
-          )}
-          {err && <Typography color="error" mt={2}>{err}</Typography>}
+      {/* Περιεχόμενο */}
+      {loading && <Typography sx={{ mt: 2 }}>Loading…</Typography>}
+      {err && <Typography color="error" sx={{ mt: 2 }}>{err}</Typography>}
 
-          {!loading && !err && (
-            <Paper variant="outlined" sx={{ mt: 2, p: { xs: 1, sm: 1.5 } }}>
-              <MyScheduleGrid days={week.days} assignments={data} />
-            </Paper>
-          )}
-        </>
-      ) : (
-        <>
-          <Box mt={2}>
-            <MonthNav
-              label={month.label}
-              onPrev={() => setAnchor((d) => addMonths(d, -1))}
-              onToday={() => setAnchor(new Date())}
-              onNext={() => setAnchor((d) => addMonths(d, +1))}
-            />
-          </Box>
-
-          {loading && (
-            <Stack direction="row" alignItems="center" gap={1.5} mt={2}>
-              <CircularProgress size={20} />
-              <Typography>Loading…</Typography>
-            </Stack>
-          )}
-          {err && <Typography color="error" mt={2}>{err}</Typography>}
-
-          {!loading && !err && (
-            <Paper variant="outlined" sx={{ mt: 2, p: { xs: 1, sm: 1.5 } }}>
-              <MyMonthGrid
-                matrix={month.matrix}
-                month={anchor.getMonth()}
-                assignments={data}
-              />
-            </Paper>
-          )}
-        </>
+      {!loading && !err && (
+        view === "WEEK" ? (
+          <MyScheduleGrid days={weekDays} assignments={data} />
+        ) : (
+          <MyMonthGrid
+            matrix={month.matrix}
+            month={anchor.getMonth()}
+            // MyMonthGrid στο employee χρησιμοποιεί μόνο assignments
+            assignments={data}
+          />
+        )
       )}
     </Box>
   );
