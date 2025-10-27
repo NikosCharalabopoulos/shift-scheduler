@@ -1,21 +1,43 @@
 // staffgrid/src/components/MonthNav.jsx
 import React from "react";
+import { Stack, Button, Typography } from "@mui/material";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
+import TodayIcon from "@mui/icons-material/Today";
 
 export default function MonthNav({ label, onPrev, onToday, onNext }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <button onClick={onPrev} style={btnStyle}>&larr; Prev</button>
-      <button onClick={onToday} style={btnStyle}>Today</button>
-      <button onClick={onNext} style={btnStyle}>Next &rarr;</button>
-      <div style={{ fontWeight: 700, marginLeft: 8 }}>{label}</div>
-    </div>
+    <Stack direction="row" alignItems="center" spacing={1.5}>
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<ChevronLeftIcon />}
+        onClick={onPrev}
+      >
+        Prev
+      </Button>
+
+      <Button
+        variant="outlined"
+        size="small"
+        startIcon={<TodayIcon />}
+        onClick={onToday}
+      >
+        Today
+      </Button>
+
+      <Button
+        variant="outlined"
+        size="small"
+        endIcon={<ChevronRightIcon />}
+        onClick={onNext}
+      >
+        Next
+      </Button>
+
+      <Typography variant="subtitle1" fontWeight={700} sx={{ ml: 1 }}>
+        {label}
+      </Typography>
+    </Stack>
   );
 }
-
-const btnStyle = {
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  background: "white",
-  cursor: "pointer",
-};

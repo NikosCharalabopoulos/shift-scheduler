@@ -282,28 +282,36 @@ export default function ScheduleWrapper() {
       ) : (
         <>
           {/* Controls: Department filter + Month nav */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <label style={{ fontSize: 14, color: "#475569" }}>Department:</label>
-              <select
-                value={depId}
-                onChange={(e) => setDepId(e.target.value)}
-                style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 220 }}
-              >
-                <option value="">All Departments</option>
-                {departments.map((d) => (
-                  <option key={d._id} value={d._id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
+          <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center", // ⬅️ κεντράρισμα οριζόντια
+    gap: 12,
+    flexWrap: "wrap",
+  }}
+>
+  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <label style={{ fontSize: 14, color: "#475569" }}>Department:</label>
+    <select
+      value={depId}
+      onChange={(e) => setDepId(e.target.value)}
+      style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 220 }}
+    >
+      <option value="">All Departments</option>
+      {departments.map((d) => (
+        <option key={d._id} value={d._id}>{d.name}</option>
+      ))}
+    </select>
+  </div>
 
-            <MonthNav
-              label={month.label}
-              onPrev={() => setAnchor((d) => addMonths(d, -1))}
-              onToday={() => setAnchor(new Date())}
-              onNext={() => setAnchor((d) => addMonths(d, +1))}
-            />
-          </div>
+  <MonthNav
+    label={month.label}
+    onPrev={() => setAnchor((d) => addMonths(d, -1))}
+    onToday={() => setAnchor(new Date())}
+    onNext={() => setAnchor((d) => addMonths(d, +1))}
+  />
+</div>
 
           {depErr && <div style={{ marginTop: 12, color: "#ef4444" }}>{depErr}</div>}
           {loading && <div style={{ marginTop: 16 }}>Loading…</div>}

@@ -22,7 +22,7 @@ import {
 
 export default function Schedule({ onAnyChange }) {
   const [departments, setDepartments] = useState([]);
-  const [departmentId, setDepartmentId] = useState("");
+  const [departmentId, setDepartmentId] = useState(""); // "" = All
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ export default function Schedule({ onAnyChange }) {
       .get("/departments")
       .then((r) => {
         setDepartments(r.data || []);
-        if (r.data?.length && !departmentId) setDepartmentId(r.data[0]._id);
+        // default: All Departments => κρατάμε departmentId = ""
       })
       .catch(() => {});
   }, []);
@@ -50,13 +50,14 @@ export default function Schedule({ onAnyChange }) {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
   async function fetchShifts() {
-    if (!departmentId) return;
     setLoading(true);
     setErr("");
     try {
       const from = formatYMDLocal(days[0]);
       const to = formatYMDLocal(addDays(days[6], 1)); // exclusive
-      const { data } = await api.get("/shifts", { params: { department: departmentId, from, to } });
+      const params = { from, to };
+      if (departmentId) params.department = departmentId; // φίλτρο μόνο αν έχει επιλεγεί
+      const { data } = await api.get("/shifts", { params });
       setShifts(data || []);
     } catch (e) {
       setErr(getErrorMessage(e));
@@ -126,26 +127,25 @@ export default function Schedule({ onAnyChange }) {
 
   return (
     <Box p={3}>
-      {/* Header: Title + common WeekNav */}
+      {/* Header: centered WeekNav */}
       <Stack
-  direction={{ xs: "column", sm: "row" }}
-  alignItems={{ xs: "center", sm: "center" }}
-  justifyContent="center"
-  spacing={1.5}
-  sx={{ width: "100%", mt: 1 }}
->
-  <WeekNav
-    label={weekLabel}
-    onPrev={prevWeek}
-    onToday={todayWeek}
-    onNext={nextWeek}
-  />
-</Stack>
-
+        direction={{ xs: "column", sm: "row" }}
+        alignItems={{ xs: "center", sm: "center" }}
+        justifyContent="center"
+        spacing={1.5}
+        sx={{ width: "100%", mt: 1 }}
+      >
+        <WeekNav
+          label={weekLabel}
+          onPrev={prevWeek}
+          onToday={todayWeek}
+          onNext={nextWeek}
+        />
+      </Stack>
 
       {/* Controls */}
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "stretch", sm: "center" }} sx={{ mt: 2 }}>
-        <FormControl size="small" sx={{ minWidth: 220 }}>
+        <FormControl size="small" sx={{ minWidth: 240 }}>
           <InputLabel id="dep-label">Department</InputLabel>
           <Select
             labelId="dep-label"
@@ -153,6 +153,9 @@ export default function Schedule({ onAnyChange }) {
             value={departmentId}
             onChange={(e) => setDepartmentId(e.target.value)}
           >
+            <MenuItem value="">
+              <em>All Departments</em>
+            </MenuItem>
             {departments.map((d) => (
               <MenuItem key={d._id} value={d._id}>{d.name}</MenuItem>
             ))}
@@ -195,6 +198,12 @@ export default function Schedule({ onAnyChange }) {
                               <Typography fontWeight={600}>
                                 {s.startTime}–{s.endTime}
                               </Typography>
+                              {/* προαιρετικά δείξε και τμήμα όταν είναι All */}
+                              {(!departmentId && s.department?.name) && (
+                                <Typography variant="body2" color="text.secondary">
+                                  {s.department.name}
+                                </Typography>
+                              )}
                               {s.notes && (
                                 <Typography variant="body2" color="text.secondary">{s.notes}</Typography>
                               )}
