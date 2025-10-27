@@ -1,6 +1,28 @@
+// staffgrid/src/pages/Departments.jsx
 import { useEffect, useMemo, useState } from "react";
 import { api, getErrorMessage } from "../lib/api";
 import DepartmentFormModal from "../components/DepartmentFormModal";
+
+// MUI
+import {
+  Box,
+  Stack,
+  Typography,
+  Button,
+  TextField,
+  Paper,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 export default function Departments() {
   const [rows, setRows] = useState([]);
@@ -18,7 +40,7 @@ export default function Departments() {
     setErr("");
     try {
       const { data } = await api.get("/departments");
-      setRows(data);
+      setRows(Array.isArray(data) ? data : []);
     } catch (e) {
       setErr(getErrorMessage(e));
     } finally {
@@ -35,8 +57,8 @@ export default function Departments() {
     const q = query.toLowerCase();
     return rows.filter(
       (r) =>
-        r.name?.toLowerCase().includes(q) ||
-        r.description?.toLowerCase().includes(q)
+        (r.name || "").toLowerCase().includes(q) ||
+        (r.description || "").toLowerCase().includes(q)
     );
   }, [rows, query]);
 
@@ -56,119 +78,108 @@ export default function Departments() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Departments</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
+    <Box p={3}>
+      {/* Header */}
+      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between" gap={2}>
+        <Typography variant="h5" fontWeight={700}>Departments</Typography>
+        <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <TextField
             placeholder="Search name/description…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 260 }}
+            size="small"
+            fullWidth
           />
-          <button
-            style={styles.primaryBtn}
+          <Button
+            variant="contained"
             onClick={() => { setEditing(null); setOpenForm(true); }}
           >
             New Department
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Stack>
 
-      {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-      {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
+      {/* States */}
+      {loading && (
+        <Stack direction="row" alignItems="center" gap={1.5} sx={{ mt: 2 }}>
+          <CircularProgress size={20} />
+          <Typography>Loading…</Typography>
+        </Stack>
+      )}
+      {err && <Typography color="error" sx={{ mt: 2 }}>{err}</Typography>}
       {!loading && !err && filtered.length === 0 && (
-        <div style={{ marginTop: 16, color: "#64748b" }}>No departments found.</div>
+        <Typography color="text.secondary" sx={{ mt: 2 }}>No departments found.</Typography>
       )}
 
+      {/* Table */}
       {!loading && !err && filtered.length > 0 && (
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: 240 }}>Name</th>
-                <th>Description</th>
-                <th style={{ width: 200 }}>Created</th>
-                <th style={{ width: 140 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={r._id}>
-                  <td>{r.name}</td>
-                  <td>{r.description || <span style={{ color: "#94a3b8" }}>—</span>}</td>
-                  <td>{new Date(r.createdAt).toLocaleString()}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                      <button
-                        style={styles.secondaryBtn}
-                        onClick={() => { setEditing(r); setOpenForm(true); }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        style={{
-                          ...styles.dangerBtn,
-                          opacity: deletingId === r._id && deleting ? 0.6 : 1,
-                          cursor: deletingId === r._id && deleting ? "wait" : "pointer"
-                        }}
-                        onClick={() => {
-                          const ok = confirm(`Delete department "${r.name}"?`);
-                          if (ok) onDelete(r._id);
-                        }}
-                        disabled={deleting && deletingId === r._id}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {deleteErr && <div style={{ marginTop: 12, color: "#ef4444" }}>{deleteErr}</div>}
-        </div>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell width={240}>Name</TableCell>
+                <TableCell>Description</TableCell>
+                <TableCell width={200}>Created</TableCell>
+                <TableCell align="right" width={120}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filtered.map((r) => {
+                const isDeletingThis = deleting && deletingId === r._id;
+                return (
+                  <TableRow key={r._id} hover>
+                    <TableCell>{r.name}</TableCell>
+                    <TableCell>
+                      <Typography noWrap title={r.description || ""} color={r.description ? "inherit" : "text.secondary"}>
+                        {r.description || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{new Date(r.createdAt).toLocaleString()}</TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Tooltip title="Edit">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => { setEditing(r); setOpenForm(true); }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <span>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              disabled={isDeletingThis}
+                              onClick={() => {
+                                const ok = confirm(`Delete department "${r.name}"?`);
+                                if (ok) onDelete(r._id);
+                              }}
+                            >
+                              {isDeletingThis ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
+      {deleteErr && <Typography color="error" sx={{ mt: 1.5 }}>{deleteErr}</Typography>}
+
+      {/* Modal */}
       <DepartmentFormModal
         open={openForm}
         onClose={() => setOpenForm(false)}
         onSaved={fetchDepartments}
         initial={editing}
       />
-    </div>
+    </Box>
   );
 }
-
-const styles = {
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    border: "1px solid #e2e8f0"
-  },
-  primaryBtn: {
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: 0,
-    background: "#22c55e",
-    color: "black",
-    fontWeight: 600,
-    cursor: "pointer"
-  },
-  secondaryBtn: {
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: "1px solid #cbd5e1",
-    background: "white",
-    cursor: "pointer"
-  },
-  dangerBtn: {
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: 0,
-    background: "#ef4444",
-    color: "white",
-    fontWeight: 600,
-    cursor: "pointer"
-  }
-};

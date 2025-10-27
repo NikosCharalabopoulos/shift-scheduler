@@ -3,6 +3,28 @@ import React, { useEffect, useMemo, useState } from "react";
 import { getErrorMessage } from "../lib/api";
 import { startOfWeek, addDays, formatYMDLocal } from "../utils/date";
 
+// MUI
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Stack,
+  Grid,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  Typography,
+  Paper,
+  Chip,
+} from "@mui/material";
+
 const WEEKDAYS = [
   { value: 1, label: "Mon" },
   { value: 2, label: "Tue" },
@@ -10,7 +32,7 @@ const WEEKDAYS = [
   { value: 4, label: "Thu" },
   { value: 5, label: "Fri" },
   { value: 6, label: "Sat" },
-  { value: 0, label: "Sun" }, // 0..6 στο backend — Sunday=0
+  { value: 0, label: "Sun" }, // 0..6 backend — Sunday=0
 ];
 
 function weekdayOffsetFromMonday(weekday) {
@@ -20,8 +42,8 @@ function weekdayOffsetFromMonday(weekday) {
 export default function AvailabilityFormModal({
   open,
   onClose,
-  onSaved,     // (payload, id) για EDIT ή single create
-  onSaveMany,  // (payloads[]) για batch create
+  onSaved,     // (payload, id) for EDIT or single create
+  onSaveMany,  // (payloads[]) for batch create
   initial
 }) {
   const isEdit = !!initial?._id;
@@ -30,9 +52,9 @@ export default function AvailabilityFormModal({
     if (!initial) {
       const todayYMD = new Date().toISOString().slice(0, 10);
       return {
-        anchorDate: todayYMD,                // UX μόνο
-        selectedDays: new Set([1,2,3,4,5]),  // Mon–Fri
-        weekday: 1,                          // μόνο για edit
+        anchorDate: todayYMD,               // UX only
+        selectedDays: new Set([1,2,3,4,5]), // Mon–Fri
+        weekday: 1,                         // for edit-only
         startTime: "09:00",
         endTime: "17:00",
       };
@@ -94,7 +116,7 @@ export default function AvailabilityFormModal({
   }
 
   async function onSubmit(e) {
-    e.preventDefault();
+    e?.preventDefault?.();
     const v = validate();
     if (v) { setErr(v); return; }
 
@@ -131,9 +153,7 @@ export default function AvailabilityFormModal({
     }
   }
 
-  if (!open) return null;
-
-  // ✅ PREVIEW ημερομηνιών για την επιλεγμένη εβδομάδα (UX)
+  // Preview ημερομηνιών για την επιλεγμένη εβδομάδα (UX)
   const mondayOfWeek = startOfWeek(new Date(form.anchorDate));
   const previewDates = !isEdit
     ? Array.from(form.selectedDays)
@@ -150,117 +170,125 @@ export default function AvailabilityFormModal({
       ];
 
   return (
-    <div style={backdrop} onClick={onClose}>
-      <div style={modal} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>{isEdit ? "Edit Availability" : "New Availability (batch)"}</h3>
+    <Dialog open={open} onClose={() => !submitting && onClose?.()} fullWidth maxWidth="sm">
+      <DialogTitle>{isEdit ? "Edit Availability" : "New Availability (batch)"}</DialogTitle>
 
+      <DialogContent dividers>
         {!isEdit && (
-          <p style={{ marginTop: 0, marginBottom: 8, color: "#64748b" }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             Tip: Οι ώρες ισχύουν επαναλαμβανόμενα για τις επιλεγμένες μέρες κάθε εβδομάδα.
-          </p>
+          </Typography>
         )}
 
-        <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-          {/* Anchor week */}
-          <label style={label}>
-            <span>Week (anchor date)</span>
-            <input
+        <form onSubmit={onSubmit}>
+          <Stack spacing={2}>
+            {/* Anchor week */}
+            <TextField
+              label="Week (anchor date)"
               type="date"
               name="anchorDate"
               value={form.anchorDate}
               onChange={onChange}
-              style={input}
+              size="small"
+              InputLabelProps={{ shrink: true }}
             />
-          </label>
 
-          {/* Multi-day ή single-day επιλογή */}
-          {!isEdit ? (
-            <div style={{ display: "grid", gap: 6 }}>
-              <span style={{ fontSize: 14 }}>Weekdays</span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {WEEKDAYS.map((w) => {
-                  const checked = form.selectedDays.has(w.value);
-                  return (
-                    <label key={w.value} style={chk}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleDay(w.value)}
+            {/* Multi-day ή single-day επιλογή */}
+            {!isEdit ? (
+              <Stack spacing={0.5}>
+                <Typography variant="body2">Weekdays</Typography>
+                <FormGroup row>
+                  {WEEKDAYS.map((w) => {
+                    const checked = form.selectedDays.has(w.value);
+                    return (
+                      <FormControlLabel
+                        key={w.value}
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={checked}
+                            onChange={() => toggleDay(w.value)}
+                          />
+                        }
+                        label={w.label}
+                        sx={{ mr: 1.5 }}
                       />
-                      <span>{w.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <label style={label}>
-              <span>Weekday</span>
-              <select name="weekday" value={form.weekday} onChange={onChange} style={input}>
-                {WEEKDAYS.map((w) => (
-                  <option key={w.value} value={w.value}>{w.label}</option>
+                    );
+                  })}
+                </FormGroup>
+              </Stack>
+            ) : (
+              <FormControl size="small">
+                <InputLabel id="weekday-label">Weekday</InputLabel>
+                <Select
+                  labelId="weekday-label"
+                  label="Weekday"
+                  name="weekday"
+                  value={form.weekday}
+                  onChange={onChange}
+                >
+                  {WEEKDAYS.map((w) => (
+                    <MenuItem key={w.value} value={w.value}>{w.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
+            {/* Ώρες */}
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Start"
+                  type="time"
+                  name="startTime"
+                  value={form.startTime}
+                  onChange={onChange}
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="End"
+                  type="time"
+                  name="endTime"
+                  value={form.endTime}
+                  onChange={onChange}
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+
+            {/* Preview ημερομηνιών αυτής της εβδομάδας */}
+            <Paper variant="outlined" sx={{ p: 1.5, bgcolor: "grey.50" }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+                Preview (this week):
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap">
+                {previewDates.map((p, idx) => (
+                  <Chip key={idx} label={p} size="small" variant="outlined" />
                 ))}
-              </select>
-            </label>
-          )}
+              </Stack>
+            </Paper>
 
-          {/* Ώρες */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <label style={label}>
-              <span>Start</span>
-              <input type="time" name="startTime" value={form.startTime} onChange={onChange} style={input} />
-            </label>
-            <label style={label}>
-              <span>End</span>
-              <input type="time" name="endTime" value={form.endTime} onChange={onChange} style={input} />
-            </label>
-          </div>
-
-          {/* ✅ Preview ημερομηνιών αυτής της εβδομάδας */}
-          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 10 }}>
-            <div style={{ fontSize: 12, color: "#475569", marginBottom: 6 }}>Preview (this week):</div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {previewDates.map((p, idx) => (
-                <span key={idx} style={pill}>{p}</span>
-              ))}
-            </div>
-          </div>
-
-          {err && <div style={{ color: "#ef4444" }}>{err}</div>}
-
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button type="button" onClick={onClose} style={secondaryBtn} disabled={submitting}>Cancel</button>
-            <button type="submit" style={primaryBtn} disabled={submitting}>
-              {isEdit ? "Save" : "Create"}
-            </button>
-          </div>
+            {err && <Typography color="error">{err}</Typography>}
+            {/* hidden submit for Enter key */}
+            <button type="submit" style={{ display: "none" }} />
+          </Stack>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={onClose} variant="outlined" disabled={submitting}>
+          Cancel
+        </Button>
+        <Button onClick={onSubmit} variant="contained" disabled={submitting}>
+          {isEdit ? "Save" : "Create"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
-
-const backdrop = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(15,23,42,0.45)",
-  display: "grid",
-  placeItems: "center",
-  padding: 16,
-  zIndex: 50,
-};
-
-const modal = {
-  width: "min(640px, 100%)",
-  background: "white",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 15px 40px rgba(0,0,0,0.25)",
-};
-
-const label = { display: "grid", gap: 6, fontSize: 14 };
-const input = { padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" };
-const chk = { display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 10px", border: "1px solid #e2e8f0", borderRadius: 999, background: "white" };
-const pill = { display: "inline-block", padding: "2px 8px", borderRadius: 999, background: "white", border: "1px solid #e2e8f0", fontSize: 12 };
-const primaryBtn = { padding: "8px 10px", borderRadius: 8, border: 0, background: "#22c55e", color: "black", fontWeight: 600, cursor: "pointer" };
-const secondaryBtn = { padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "white", cursor: "pointer" };

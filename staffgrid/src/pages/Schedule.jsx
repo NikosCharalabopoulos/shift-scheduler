@@ -4,6 +4,21 @@ import { startOfWeek, addDays, formatYMDLocal, formatShort } from "../utils/date
 import ShiftFormModal from "../components/ShiftFormModal";
 import AssignModal from "../components/AssignModal";
 
+// MUI
+import {
+  Box,
+  Stack,
+  Paper,
+  Typography,
+  Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Grid,
+  Divider,
+} from "@mui/material";
+
 export default function Schedule({ onAnyChange }) {
   const [departments, setDepartments] = useState([]);
   const [departmentId, setDepartmentId] = useState("");
@@ -15,11 +30,11 @@ export default function Schedule({ onAnyChange }) {
   const [editingShift, setEditingShift] = useState(null);
   const [assignFor, setAssignFor] = useState(null);
 
-  // per-shift busy for destructive actions (delete)
+  // per-shift busy for Delete
   const [busyShift, setBusyShift] = useState({});
   const isBusy = (id) => !!busyShift[id];
   const setBusy = (id, on) =>
-    setBusyShift((b) => (on ? { ...b, [id]: true } : (b[id] && delete b[id], { ...b })));
+    setBusyShift((b) => (on ? { ...b, [id]: true } : (delete b[id], { ...b })));
 
   useEffect(() => {
     api
@@ -78,7 +93,7 @@ export default function Schedule({ onAnyChange }) {
     try {
       await api.delete(`/shifts/${id}`);
       await fetchShifts();
-      onAnyChange?.(); // ενημέρωσε π.χ. Month
+      onAnyChange?.();
       alert("Shift deleted.");
     } catch (e) {
       alert(getErrorMessage(e));
@@ -87,14 +102,12 @@ export default function Schedule({ onAnyChange }) {
     }
   }
 
-  // helper για modal saves (create/edit)
   async function handleShiftSaved() {
     setOpenShiftForm(false);
     await fetchShifts();
     onAnyChange?.();
   }
 
-  // helper για AssignModal αλλαγές (assign/unassign)
   async function handleAssignChanged() {
     setAssignFor(null);
     await fetchShifts();
@@ -102,92 +115,122 @@ export default function Schedule({ onAnyChange }) {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
-        <h2 style={{ margin: 0 }}>Schedule</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={prevWeek}>← Prev</button>
-          <button onClick={todayWeek}>Today</button>
-          <button onClick={nextWeek}>Next →</button>
-        </div>
-      </div>
+    <Box p={3}>
+      {/* Header */}
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="h5" fontWeight={700}>Schedule</Typography>
+        <Stack direction="row" spacing={1}>
+          <Button variant="outlined" onClick={prevWeek}>← Prev</Button>
+          <Button variant="outlined" onClick={todayWeek}>Today</Button>
+          <Button variant="outlined" onClick={nextWeek}>Next →</Button>
+        </Stack>
+      </Stack>
 
-      <div style={{ display: "flex", gap: 12, marginTop: 12, alignItems: "center" }}>
-        <label>
-          <span style={{ marginRight: 6 }}>Department</span>
-          <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+      {/* Controls */}
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "stretch", sm: "center" }} sx={{ mt: 2 }}>
+        <FormControl size="small" sx={{ minWidth: 220 }}>
+          <InputLabel id="dep-label">Department</InputLabel>
+          <Select
+            labelId="dep-label"
+            label="Department"
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+          >
             {departments.map((d) => (
-              <option key={d._id} value={d._id}>{d.name}</option>
+              <MenuItem key={d._id} value={d._id}>{d.name}</MenuItem>
             ))}
-          </select>
-        </label>
-        <button
+          </Select>
+        </FormControl>
+
+        <Button
+          variant="contained"
+          color="primary"
           onClick={() => { setEditingShift(null); setOpenShiftForm(true); }}
-          style={{ padding: "8px 10px", borderRadius: 8, border: 0, background: "#22c55e", color: "black", fontWeight: 600 }}
+          sx={{ ml: { sm: "auto" } }}
         >
           New Shift
-        </button>
-      </div>
+        </Button>
+      </Stack>
 
-      {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-      {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
+      {loading && <Typography sx={{ mt: 2 }}>Loading…</Typography>}
+      {err && <Typography color="error" sx={{ mt: 2 }}>{err}</Typography>}
 
-      <div
-        style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 12, marginTop: 16, alignItems: "start" }}
-      >
+      {/* Week grid */}
+      <Grid container spacing={2} sx={{ mt: 2 }}>
         {days.map((d) => {
           const key = formatYMDLocal(d);
           const list = shiftsByDate[key] || [];
           return (
-            <div key={key} style={{ border: "1px solid #e2e8f0", borderRadius: 12, padding: 12, minHeight: 140 }}>
-              <div style={{ fontWeight: 700, marginBottom: 8 }}>{formatShort(d)}</div>
-              {list.length === 0 ? (
-                <div style={{ color: "#94a3b8" }}>No shifts</div>
-              ) : (
-                <div style={{ display: "grid", gap: 8 }}>
-                  {list.map((s) => {
-                    const rowBusy = isBusy(s._id);
-                    return (
-                      <div key={s._id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 10 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                          <div>
-                            <div style={{ fontWeight: 600 }}>
-                              {s.startTime}–{s.endTime}
-                            </div>
-                            {s.notes && <div style={{ color: "#64748b", fontSize: 13 }}>{s.notes}</div>}
-                            {rowBusy && <div style={{ color: "#64748b", fontSize: 12, marginTop: 4 }}>Processing…</div>}
-                          </div>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button
-                              onClick={() => { setEditingShift(s); setOpenShiftForm(true); }}
+            <Grid item xs={12} sm={6} md={4} lg={12/7} key={key}>
+              <Paper variant="outlined" sx={{ p: 1.5, minHeight: 160, display: "flex", flexDirection: "column" }}>
+                <Typography fontWeight={700} sx={{ mb: 1 }}>{formatShort(d)}</Typography>
+
+                {list.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">No shifts</Typography>
+                ) : (
+                  <Stack spacing={1}>
+                    {list.map((s) => {
+                      const rowBusy = isBusy(s._id);
+                      return (
+                        <Paper key={s._id} variant="outlined" sx={{ p: 1.25, borderRadius: 2 }}>
+                          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                            <Box>
+                              <Typography fontWeight={600}>
+                                {s.startTime}–{s.endTime}
+                              </Typography>
+                              {s.notes && (
+                                <Typography variant="body2" color="text.secondary">{s.notes}</Typography>
+                              )}
+                              {rowBusy && (
+                                <Typography variant="caption" color="text.secondary">Processing…</Typography>
+                              )}
+                            </Box>
+
+                            <Stack direction="row" spacing={1}>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => { setEditingShift(s); setOpenShiftForm(true); }}
+                                disabled={rowBusy}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="error"
+                                onClick={() => deleteShift(s._id)}
+                                disabled={rowBusy}
+                              >
+                                {rowBusy ? "Deleting…" : "Delete"}
+                              </Button>
+                            </Stack>
+                          </Stack>
+
+                          <Divider sx={{ my: 1 }} />
+
+                          <Stack direction="row" spacing={1}>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={() => setAssignFor(s)}
                               disabled={rowBusy}
                             >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => deleteShift(s._id)}
-                              disabled={rowBusy}
-                              style={{ background: rowBusy ? "#fca5a5" : "#ef4444", color: "white", border: 0, borderRadius: 6, padding: "6px 8px" }}
-                            >
-                              {rowBusy ? "Deleting…" : "Delete"}
-                            </button>
-                          </div>
-                        </div>
-                        <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-                          <button onClick={() => setAssignFor(s)} style={{ padding: "6px 8px", borderRadius: 6 }} disabled={rowBusy}>
-                            Assign
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                              Assign
+                            </Button>
+                          </Stack>
+                        </Paper>
+                      );
+                    })}
+                  </Stack>
+                )}
+              </Paper>
+            </Grid>
           );
         })}
-      </div>
+      </Grid>
 
+      {/* Modals */}
       <ShiftFormModal
         open={openShiftForm}
         onClose={() => setOpenShiftForm(false)}
@@ -203,6 +246,6 @@ export default function Schedule({ onAnyChange }) {
         onChanged={handleAssignChanged}
         shift={assignFor}
       />
-    </div>
+    </Box>
   );
 }

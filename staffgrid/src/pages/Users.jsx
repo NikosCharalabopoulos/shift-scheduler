@@ -1,10 +1,29 @@
+// staffgrid/src/pages/Users.jsx
 import { useEffect, useMemo, useState } from "react";
 import { api, getErrorMessage } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import CreateUserModal from "../components/CreateUserModal";
 
+// MUI
+import {
+  Box,
+  Stack,
+  Typography,
+  Button,
+  TextField,
+  Paper,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  CircularProgress,
+  Chip,
+} from "@mui/material";
+
 export default function Users() {
-  const { user } = useAuth(); // already guarded by RoleGuard at routing
+  const { user } = useAuth(); // guard ήδη στο routing
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -16,7 +35,7 @@ export default function Users() {
     setErr("");
     try {
       const { data } = await api.get("/users");
-      setRows(data);
+      setRows(Array.isArray(data) ? data : []);
     } catch (e) {
       setErr(getErrorMessage(e));
     } finally {
@@ -33,80 +52,93 @@ export default function Users() {
     const q = query.toLowerCase();
     return rows.filter(
       (r) =>
-        r.fullName?.toLowerCase().includes(q) ||
-        r.email?.toLowerCase().includes(q) ||
-        r.role?.toLowerCase().includes(q)
+        (r.fullName || "").toLowerCase().includes(q) ||
+        (r.email || "").toLowerCase().includes(q) ||
+        (r.role || "").toLowerCase().includes(q)
     );
   }, [rows, query]);
 
+  const roleColor = (role) =>
+    role === "OWNER" ? "secondary" :
+    role === "MANAGER" ? "primary" :
+    role === "EMPLOYEE" ? "success" : "default";
+
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Users</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
+    <Box p={3}>
+      {/* Header */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        justifyContent="space-between"
+        gap={2}
+      >
+        <Typography variant="h5" fontWeight={700}>Users</Typography>
+        <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <TextField
             placeholder="Search name/email/role…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 220 }}
+            size="small"
+            fullWidth
           />
-          <button style={styles.primaryBtn} onClick={() => setOpenCreate(true)}>New User</button>
-        </div>
-      </div>
+          <Button variant="contained" onClick={() => setOpenCreate(true)}>
+            New User
+          </Button>
+        </Stack>
+      </Stack>
 
-      {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-      {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
+      {/* States */}
+      {loading && (
+        <Stack direction="row" alignItems="center" gap={1.5} sx={{ mt: 2 }}>
+          <CircularProgress size={20} />
+          <Typography>Loading…</Typography>
+        </Stack>
+      )}
+      {err && <Typography color="error" sx={{ mt: 2 }}>{err}</Typography>}
       {!loading && !err && filtered.length === 0 && (
-        <div style={{ marginTop: 16, color: "#64748b" }}>No users found.</div>
+        <Typography color="text.secondary" sx={{ mt: 2 }}>No users found.</Typography>
       )}
 
+      {/* Table */}
       {!loading && !err && filtered.length > 0 && (
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Full Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell width={160}>Role</TableCell>
+                <TableCell width={220}>Created</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {filtered.map((r) => (
-                <tr key={r._id}>
-                  <td>{r.fullName}</td>
-                  <td>{r.email}</td>
-                  <td><code>{r.role}</code></td>
-                  <td>{new Date(r.createdAt).toLocaleString()}</td>
-                </tr>
+                <TableRow key={r._id} hover>
+                  <TableCell>{r.fullName || "—"}</TableCell>
+                  <TableCell>{r.email || "—"}</TableCell>
+                  <TableCell>
+                    <Chip
+                      size="small"
+                      label={r.role || "—"}
+                      color={roleColor(r.role)}
+                      variant="filled"
+                      sx={{ fontWeight: 700 }}
+                    />
+                  </TableCell>
+                  <TableCell>{new Date(r.createdAt).toLocaleString()}</TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
+      {/* Create Modal */}
       <CreateUserModal
         open={openCreate}
         onClose={() => setOpenCreate(false)}
         onCreated={fetchUsers}
       />
-    </div>
+    </Box>
   );
 }
-
-const styles = {
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    border: "1px solid #e2e8f0"
-  },
-  primaryBtn: {
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: 0,
-    background: "#22c55e",
-    color: "black",
-    fontWeight: 600,
-    cursor: "pointer"
-  }
-};

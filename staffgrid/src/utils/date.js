@@ -1,5 +1,7 @@
 // staffgrid/src/utils/date.js
 
+/* ---------- Week helpers ---------- */
+
 export function startOfWeek(d) {
   const date = new Date(d);
   const day = date.getDay(); // 0=Sun..6=Sat
@@ -15,7 +17,7 @@ export function addDays(d, n) {
   return dt;
 }
 
-// ✅ local YYYY-MM-DD (όχι UTC)
+// ✅ Local YYYY-MM-DD (όχι UTC)
 export function formatYMDLocal(d) {
   const dt = new Date(d);
   const y = dt.getFullYear();
@@ -32,7 +34,7 @@ export function formatShort(d) {
   });
 }
 
-/* ---------- Month helpers (νέα) ---------- */
+/* ---------- Month helpers ---------- */
 
 export function startOfMonth(d) {
   const dt = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -41,6 +43,7 @@ export function startOfMonth(d) {
 }
 
 export function endOfMonth(d) {
+  // Τελευταία ημερομηνία του μήνα (23:59:59.999)
   const dt = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   dt.setHours(23, 59, 59, 999);
   return dt;
@@ -62,8 +65,8 @@ export function getMonthMatrix(anchorDate) {
 
   // Πόσες μέρες θα δείξουμε: 35 (5 εβδομάδες) ή 42 (6 εβδομάδες)
   const daysInGrid = (() => {
-    // Υπολόγισε πόσες εβδομάδες καλύπτουν 1η..τελευταία (+ leading)
-    const after = (lastOfMonth - gridStart) / (1000 * 60 * 60 * 24) + 1; // ημέρες από gridStart έως lastOfMonth inclusive
+    // ημέρες από gridStart έως lastOfMonth inclusive
+    const after = (lastOfMonth - gridStart) / (1000 * 60 * 60 * 24) + 1;
     return after > 35 ? 42 : 35;
   })();
 
@@ -78,10 +81,16 @@ export function getMonthMatrix(anchorDate) {
 export function getMonthRange(anchorDate) {
   const first = startOfMonth(anchorDate);
   const last = endOfMonth(anchorDate);
+  // ✅ Exclusive τέλος εύρους για backend φίλτρο (date < to)
+  const toExclusive = addDays(last, 1);
+
   return {
-    fromYMD: formatYMDLocal(first).slice(0, 10),
-    toYMD: formatYMDLocal(last).slice(0, 10),
+    fromYMD: formatYMDLocal(first),         // inclusive
+    toYMD: formatYMDLocal(toExclusive),     // exclusive (επόμενη της τελευταίας)
     matrix: getMonthMatrix(anchorDate),
-    label: anchorDate.toLocaleDateString(undefined, { month: "long", year: "numeric" }),
+    label: anchorDate.toLocaleDateString(undefined, {
+      month: "long",
+      year: "numeric",
+    }),
   };
 }

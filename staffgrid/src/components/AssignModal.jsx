@@ -1,6 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, getErrorMessage } from "../lib/api";
 
+// MUI
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Stack,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+} from "@mui/material";
+
 export default function AssignModal({ open, onClose, onChanged, shift }) {
   const [employees, setEmployees] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -25,10 +42,7 @@ export default function AssignModal({ open, onClose, onChanged, shift }) {
       .finally(() => setLoadingLists(false));
   }, [open, shift?._id]);
 
-  const assignedIds = useMemo(
-    () => new Set(assignments.map((a) => a.employee?._id)),
-    [assignments]
-  );
+  const assignedIds = useMemo(() => new Set(assignments.map((a) => a.employee?._id)), [assignments]);
   const availableEmployees = useMemo(
     () => employees.filter((e) => !assignedIds.has(e._id)),
     [employees, assignedIds]
@@ -41,11 +55,7 @@ export default function AssignModal({ open, onClose, onChanged, shift }) {
     setSubmitting(true);
     setError("");
     try {
-      await api.post("/shift-assignments", {
-        shift: shift._id,
-        employee: employeeId,
-        // assignedBy το βάζει ο server από το JWT
-      });
+      await api.post("/shift-assignments", { shift: shift._id, employee: employeeId });
       alert("Assigned.");
       setEmployeeId("");
       onChanged?.();
@@ -76,93 +86,91 @@ export default function AssignModal({ open, onClose, onChanged, shift }) {
   }
 
   return (
-    <div style={styles.backdrop} onClick={() => !submitting && onClose?.()}>
-      <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>
-          Assignments — {shift.startTime}–{shift.endTime}
-        </h3>
+    <Dialog open={open} onClose={() => !submitting && onClose?.()} fullWidth maxWidth="sm">
+      <DialogTitle>
+        Assignments — {shift.startTime}–{shift.endTime}
+      </DialogTitle>
 
+      <DialogContent dividers>
         {loadingLists ? (
-          <div style={{ color: "#64748b" }}>Loading…</div>
+          <Stack direction="row" alignItems="center" gap={1}>
+            <CircularProgress size={18} />
+            <Typography color="text.secondary">Loading…</Typography>
+          </Stack>
         ) : (
-          <>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Assigned</div>
+          <Stack spacing={2}>
+            <Box>
+              <Typography fontWeight={600} sx={{ mb: 0.5 }}>
+                Assigned
+              </Typography>
               {assignments.length === 0 ? (
-                <div style={{ color: "#64748b" }}>No one assigned yet.</div>
+                <Typography variant="body2" color="text.secondary">No one assigned yet.</Typography>
               ) : (
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                <Stack spacing={1}>
                   {assignments.map((a) => (
-                    <li
-                      key={a._id}
-                      style={{ display: "flex", justifyContent: "space-between", gap: 8 }}
-                    >
-                      <span>
+                    <Stack key={a._id} direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                      <Typography>
                         {a.employee?.user?.fullName}{" "}
-                        <span style={{ color: "#94a3b8" }}>
+                        <Typography component="span" variant="body2" color="text.secondary">
                           ({a.employee?.user?.email})
-                        </span>
-                      </span>
-                      <button
-                        style={styles.dangerBtn}
+                        </Typography>
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="error"
                         onClick={() => unassign(a._id)}
                         disabled={submitting}
-                        title="Unassign"
                       >
                         {submitting ? "..." : "Unassign"}
-                      </button>
-                    </li>
+                      </Button>
+                    </Stack>
                   ))}
-                </ul>
+                </Stack>
               )}
-            </div>
+            </Box>
 
-            <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6 }}>Assign someone</div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <select
-                  value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
-                  style={styles.input}
-                  disabled={submitting}
-                >
-                  <option value="">Select employee…</option>
-                  {availableEmployees.map((e) => (
-                    <option key={e._id} value={e._id}>
-                      {e.user?.fullName} — {e.user?.email}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  style={styles.primaryBtn}
+            <Box sx={{ borderTop: "1px solid", borderColor: "divider", pt: 2 }}>
+              <Typography fontWeight={600} sx={{ mb: 1 }}>
+                Assign someone
+              </Typography>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
+                <FormControl size="small" sx={{ minWidth: 280 }}>
+                  <InputLabel id="emp-label">Select employee…</InputLabel>
+                  <Select
+                    labelId="emp-label"
+                    label="Select employee…"
+                    value={employeeId}
+                    onChange={(e) => setEmployeeId(e.target.value)}
+                    disabled={submitting}
+                  >
+                    {availableEmployees.map((e) => (
+                      <MenuItem key={e._id} value={e._id}>
+                        {e.user?.fullName} — {e.user?.email}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button
+                  variant="contained"
                   onClick={assign}
                   disabled={submitting || !employeeId}
-                  title="Assign"
                 >
                   {submitting ? "..." : "Assign"}
-                </button>
-              </div>
-            </div>
+                </Button>
+              </Stack>
+            </Box>
 
-            {error && <div style={{ color: "#ef4444", marginTop: 10 }}>{error}</div>}
-
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-              <button style={styles.secondaryBtn} onClick={onClose} disabled={submitting}>
-                Close
-              </button>
-            </div>
-          </>
+            {error && <Typography color="error">{error}</Typography>}
+          </Stack>
         )}
-      </div>
-    </div>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={onClose} disabled={submitting} variant="outlined">
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
-
-const styles = {
-  backdrop: { position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", display: "grid", placeItems: "center", zIndex: 50 },
-  modal: { width: 560, background: "white", color: "#0f172a", borderRadius: 12, padding: 20, boxShadow: "0 10px 30px rgba(0,0,0,0.2)" },
-  input: { padding: "10px 12px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 300 },
-  primaryBtn: { padding: "8px 10px", borderRadius: 8, border: 0, background: "#22c55e", color: "black", fontWeight: 600, cursor: "pointer" },
-  secondaryBtn: { padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "white", cursor: "pointer" },
-  dangerBtn: { padding: "4px 8px", borderRadius: 6, border: 0, background: "#ef4444", color: "white", cursor: "pointer" },
-};

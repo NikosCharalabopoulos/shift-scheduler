@@ -1,6 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, getErrorMessage } from "../lib/api";
 import DeclineModal from "../components/DeclineModal";
+import StatusChip from "../components/StatusChip";
+
+// MUI
+import {
+  Box,
+  Stack,
+  Paper,
+  Typography,
+  Button,
+  TextField,
+  InputLabel,
+  FormControl,
+  Select,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from "@mui/material";
 
 const STATUS = ["PENDING", "APPROVED", "DECLINED"];
 
@@ -10,7 +31,7 @@ export default function TimeOffAdmin() {
   const [err, setErr] = useState("");
 
   // filters
-  const [status, setStatus] = useState("PENDING"); // default στο PENDING
+  const [status, setStatus] = useState("PENDING");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -20,11 +41,10 @@ export default function TimeOffAdmin() {
   // decline modal
   const [declineFor, setDeclineFor] = useState(null);
 
-  // per-row action busy state
-  const [busy, setBusy] = useState({}); // { [id]: true }
+  // per-row busy
+  const [busy, setBusy] = useState({});
   const isRowBusy = (id) => !!busy[id];
-  const setRowBusy = (id, on) =>
-    setBusy((b) => (on ? { ...b, [id]: true } : (b[id] && delete b[id], { ...b })));
+  const setRowBusy = (id, on) => setBusy((b) => (on ? { ...b, [id]: true } : (delete b[id], { ...b })));
 
   useEffect(() => {
     api.get("/departments").then(r => setDepartments(r.data || [])).catch(()=>{});
@@ -120,142 +140,168 @@ export default function TimeOffAdmin() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <h2 style={{ marginTop: 0 }}>Time Off — Admin</h2>
+    <Box p={3}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Typography variant="h5" fontWeight={700}>Time Off — Admin</Typography>
+        <Button onClick={fetchList} variant="outlined" disabled={loading}>
+          {loading ? "Refreshing…" : "Refresh"}
+        </Button>
+      </Stack>
 
       {/* Filters */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginTop: 8 }}>
-        <label>
-          <div style={lbl}>Status</div>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} style={input} disabled={loading}>
-            <option value="">All</option>
-            {STATUS.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </label>
+      <Paper sx={{ p: 2, mt: 2 }}>
+        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel id="status-label">Status</InputLabel>
+            <Select
+              labelId="status-label"
+              label="Status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              disabled={loading}
+            >
+              <MenuItem value="">All</MenuItem>
+              {STATUS.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+            </Select>
+          </FormControl>
 
-        <label>
-          <div style={lbl}>From</div>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={input} disabled={loading} />
-        </label>
+          <TextField
+            size="small"
+            label="From"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            disabled={loading}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            size="small"
+            label="To"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            disabled={loading}
+            InputLabelProps={{ shrink: true }}
+          />
 
-        <label>
-          <div style={lbl}>To</div>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={input} disabled={loading} />
-        </label>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel id="dep-label">Department</InputLabel>
+            <Select
+              labelId="dep-label"
+              label="Department"
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              disabled={loading}
+            >
+              <MenuItem value="">All</MenuItem>
+              {departments.map(d => <MenuItem key={d._id} value={d._id}>{d.name}</MenuItem>)}
+            </Select>
+          </FormControl>
 
-        <label>
-          <div style={lbl}>Department</div>
-          <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} style={input} disabled={loading}>
-            <option value="">All</option>
-            {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-          </select>
-        </label>
-
-        <label style={{ flex: 1, minWidth: 240 }}>
-          <div style={lbl}>Search (name/email/reason)</div>
-          <input
+          <TextField
+            size="small"
+            label="Search (name/email/reason)"
+            placeholder="Search…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search…"
-            style={input}
             disabled={loading}
+            sx={{ minWidth: 260, flex: 1 }}
           />
-        </label>
+        </Stack>
+      </Paper>
 
-        <button onClick={fetchList} style={refreshBtn} disabled={loading}>
-          {loading ? "Refreshing…" : "Refresh"}
-        </button>
-      </div>
-
-      {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-      {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
+      {loading && <Typography sx={{ mt: 2 }}>Loading…</Typography>}
+      {err && <Typography color="error" sx={{ mt: 2 }}>{err}</Typography>}
 
       {/* Table */}
-      <div style={{ marginTop: 16, overflowX: "auto" }}>
-        <table style={table}>
-          <thead>
-            <tr>
-              <th>Employee</th>
-              <th>Department</th>
-              <th>Type</th>
-              <th>Dates</th>
-              <th>Status</th>
-              <th>Reason</th>
-              <th style={{ width: 260 }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+      <TableContainer component={Paper} sx={{ mt: 2 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Employee</TableCell>
+              <TableCell>Department</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Dates</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Reason</TableCell>
+              <TableCell align="right" width={260}>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
             {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} style={{ color: "#94a3b8", textAlign: "center", padding: 16 }}>
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ color: "text.secondary", py: 3 }}>
                   No requests found.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               filtered.map((r) => {
                 const rowBusy = isRowBusy(r._id);
                 const notPending = r.status !== "PENDING";
                 return (
-                  <tr key={r._id}>
-                    <td>
-                      <div style={{ fontWeight: 600 }}>{r.employee?.user?.fullName || "—"}</div>
-                      <div style={{ color: "#64748b", fontSize: 12 }}>{r.employee?.user?.email || "—"}</div>
-                    </td>
-                    <td>{r.employee?.department?.name || "—"}</td>
-                    <td>{r.type || "—"}</td>
-                    <td>
-                      {(r.startDate || r.endDate) ? (
-                        <>
-                          {new Date(r.startDate).toLocaleDateString()} – {new Date(r.endDate).toLocaleDateString()}
-                        </>
-                      ) : "—"}
-                    </td>
-                    <td>
-                      <span style={{ ...badge, ...(r.status === "APPROVED" ? badgeGreen : r.status === "DECLINED" ? badgeRed : badgeYellow) }}>
-                        {r.status}
-                      </span>
-                      {rowBusy && <span style={{ marginLeft: 8, fontSize: 12, color: "#64748b" }}>Processing…</span>}
-                    </td>
-                    <td>
-                      <div title={r.reason || ""} style={{ maxWidth: 280, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {r.reason || <span style={{ color: "#94a3b8" }}>—</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button
-                          style={{ ...btn, ...(notPending || rowBusy ? btnDisabled : btnPrimary) }}
+                  <TableRow key={r._id} hover>
+                    <TableCell>
+                      <Typography fontWeight={600}>{r.employee?.user?.fullName || "—"}</Typography>
+                      <Typography variant="caption" color="text.secondary">{r.employee?.user?.email || "—"}</Typography>
+                    </TableCell>
+                    <TableCell>{r.employee?.department?.name || "—"}</TableCell>
+                    <TableCell>{r.type || "—"}</TableCell>
+                    <TableCell>
+                      {(r.startDate || r.endDate)
+                        ? `${new Date(r.startDate).toLocaleDateString()} – ${new Date(r.endDate).toLocaleDateString()}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <StatusChip status={r.status} />
+                      {rowBusy && (
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                          Processing…
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ maxWidth: 280 }}>
+                      <Typography noWrap title={r.reason || ""} color={r.reason ? "inherit" : "text.secondary"}>
+                        {r.reason || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="wrap">
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
                           disabled={notPending || rowBusy}
                           onClick={() => approve(r._id)}
-                          title="Approve"
                         >
                           {rowBusy ? "..." : "Approve"}
-                        </button>
-                        <button
-                          style={{ ...btn, ...(notPending || rowBusy ? btnDisabled : btnWarning) }}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="warning"
                           disabled={notPending || rowBusy}
                           onClick={() => setDeclineFor(r)}
-                          title="Decline"
                         >
                           {rowBusy ? "..." : "Decline"}
-                        </button>
-                        <button
-                          style={{ ...btn, ...(notPending || rowBusy ? btnDisabled : btnDanger) }}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="error"
                           disabled={notPending || rowBusy}
                           onClick={() => remove(r._id, r.status)}
-                          title="Delete"
                         >
                           {rowBusy ? "..." : "Delete"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                        </Button>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       {/* Decline modal */}
       <DeclineModal
@@ -264,48 +310,6 @@ export default function TimeOffAdmin() {
         onConfirm={(reason) => decline(declineFor._id, reason)}
         defaultReason={declineFor?.reason || ""}
       />
-    </div>
+    </Box>
   );
 }
-
-const lbl = { fontSize: 12, color: "#64748b", marginBottom: 4 };
-const input = { padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 160 };
-const refreshBtn = { padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "white", cursor: "pointer" };
-
-const table = {
-  width: "100%",
-  borderCollapse: "collapse",
-  border: "1px solid #e2e8f0",
-};
-const thtd = {
-  borderBottom: "1px solid #e2e8f0",
-  padding: "10px 12px",
-  textAlign: "left",
-};
-const badge = { padding: "2px 8px", borderRadius: 999, fontSize: 12, border: "1px solid #e2e8f0" };
-const badgeGreen = { background: "#dcfce7", color: "#166534", borderColor: "#bbf7d0" };
-const badgeRed = { background: "#fee2e2", color: "#991b1b", borderColor: "#fecaca" };
-const badgeYellow = { background: "#fef9c3", color: "#854d0e", borderColor: "#fde68a" };
-
-const btn = { padding: "6px 10px", borderRadius: 8, cursor: "pointer", border: "1px solid #cbd5e1", background: "white" };
-const btnPrimary = { background: "#22c55e", color: "black", border: 0, fontWeight: 600 };
-const btnWarning = { background: "#fbbf24", color: "black", border: 0, fontWeight: 600 };
-const btnDanger = { background: "#ef4444", color: "white", border: 0, fontWeight: 600 };
-const btnDisabled = { opacity: 0.5, cursor: "not-allowed" };
-
-/* table cells style */
-const _thead = document?.createElement ? null : null; // no-op to avoid SSR warnings
-// apply cell styles (simple way without CSS files)
-const _patch = (() => {
-  if (typeof window === "undefined") return;
-  const apply = (selector, styleObj) => {
-    const style = Object.entries(styleObj)
-      .map(([k, v]) => `${k.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase())}:${v}`)
-      .join(";");
-    const tag = document.createElement("style");
-    tag.textContent = `${selector}{${style}}`;
-    document.head.appendChild(tag);
-  };
-  apply("table thead th", thtd);
-  apply("table tbody td", thtd);
-})();

@@ -3,6 +3,23 @@ import React, { useEffect, useMemo, useState } from "react";
 import { formatYMDLocal } from "../utils/date";
 import { getErrorMessage } from "../lib/api";
 
+// MUI
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Stack,
+  Grid,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Typography,
+} from "@mui/material";
+
 export default function TimeOffFormModal({ open, onClose, onSaved, initial }) {
   const isEdit = !!initial?._id;
 
@@ -17,8 +34,12 @@ export default function TimeOffFormModal({ open, onClose, onSaved, initial }) {
     }
     return {
       type: initial.type || "VACATION",
-      startDate: initial.startDate ? formatYMDLocal(new Date(initial.startDate)) : formatYMDLocal(new Date()),
-      endDate: initial.endDate ? formatYMDLocal(new Date(initial.endDate)) : formatYMDLocal(new Date()),
+      startDate: initial.startDate
+        ? formatYMDLocal(new Date(initial.startDate))
+        : formatYMDLocal(new Date()),
+      endDate: initial.endDate
+        ? formatYMDLocal(new Date(initial.endDate))
+        : formatYMDLocal(new Date()),
       reason: initial.reason || "",
     };
   }, [initial]);
@@ -48,7 +69,7 @@ export default function TimeOffFormModal({ open, onClose, onSaved, initial }) {
   }
 
   async function onSubmit(e) {
-    e.preventDefault();
+    e?.preventDefault?.();
     const v = validate();
     if (v) {
       setErr(v);
@@ -57,7 +78,6 @@ export default function TimeOffFormModal({ open, onClose, onSaved, initial }) {
     setSubmitting(true);
     setErr("");
     try {
-      // Δεν στέλνουμε employee/status από client
       const payload = {
         type: form.type,
         startDate: form.startDate,
@@ -73,71 +93,81 @@ export default function TimeOffFormModal({ open, onClose, onSaved, initial }) {
     }
   }
 
-  if (!open) return null;
-
   return (
-    <div style={backdrop} onClick={onClose}>
-      <div style={modal} onClick={(e) => e.stopPropagation()}>
-        <h3 style={{ marginTop: 0 }}>{isEdit ? "Edit Time Off" : "New Time Off"}</h3>
-        <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-          <label style={label}>
-            <span>Type</span>
-            <select name="type" value={form.type} onChange={onChange} style={input}>
-              <option value="VACATION">VACATION</option>
-              <option value="SICK">SICK</option>
-              <option value="OTHER">OTHER</option>
-            </select>
-          </label>
+    <Dialog open={open} onClose={() => !submitting && onClose?.()} fullWidth maxWidth="sm">
+      <DialogTitle>{isEdit ? "Edit Time Off" : "New Time Off"}</DialogTitle>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <label style={label}>
-              <span>Start Date</span>
-              <input type="date" name="startDate" value={form.startDate} onChange={onChange} style={input} />
-            </label>
-            <label style={label}>
-              <span>End Date</span>
-              <input type="date" name="endDate" value={form.endDate} onChange={onChange} style={input} />
-            </label>
-          </div>
+      <DialogContent dividers>
+        <form onSubmit={onSubmit}>
+          <Stack spacing={2}>
+            <FormControl size="small">
+              <InputLabel id="type-label">Type</InputLabel>
+              <Select
+                labelId="type-label"
+                label="Type"
+                name="type"
+                value={form.type}
+                onChange={onChange}
+              >
+                <MenuItem value="VACATION">VACATION</MenuItem>
+                <MenuItem value="SICK">SICK</MenuItem>
+                <MenuItem value="OTHER">OTHER</MenuItem>
+              </Select>
+            </FormControl>
 
-          <label style={label}>
-            <span>Reason (optional)</span>
-            <textarea name="reason" value={form.reason} onChange={onChange} rows={3} style={{ ...input, resize: "vertical" }} />
-          </label>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Start Date"
+                  type="date"
+                  name="startDate"
+                  value={form.startDate}
+                  onChange={onChange}
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="End Date"
+                  type="date"
+                  name="endDate"
+                  value={form.endDate}
+                  onChange={onChange}
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
 
-          {err && <div style={{ color: "#ef4444" }}>{err}</div>}
+            <TextField
+              label="Reason (optional)"
+              name="reason"
+              value={form.reason}
+              onChange={onChange}
+              multiline
+              minRows={3}
+              size="small"
+              fullWidth
+            />
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-            <button type="button" onClick={onClose} style={secondaryBtn} disabled={submitting}>Cancel</button>
-            <button type="submit" style={primaryBtn} disabled={submitting}>
-              {isEdit ? "Save" : "Create"}
-            </button>
-          </div>
+            {err && <Typography color="error">{err}</Typography>}
+            {/* hidden submit for Enter key */}
+            <button type="submit" style={{ display: "none" }} />
+          </Stack>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+
+      <DialogActions>
+        <Button onClick={onClose} variant="outlined" disabled={submitting}>
+          Cancel
+        </Button>
+        <Button onClick={onSubmit} variant="contained" disabled={submitting}>
+          {isEdit ? "Save" : "Create"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
-
-const backdrop = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(15,23,42,0.45)",
-  display: "grid",
-  placeItems: "center",
-  padding: 16,
-  zIndex: 50,
-};
-
-const modal = {
-  width: "min(720px, 100%)",
-  background: "white",
-  borderRadius: 12,
-  padding: 16,
-  boxShadow: "0 15px 40px rgba(0,0,0,0.25)",
-};
-
-const label = { display: "grid", gap: 6, fontSize: 14 };
-const input = { padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" };
-const primaryBtn = { padding: "8px 10px", borderRadius: 8, border: 0, background: "#22c55e", color: "black", fontWeight: 600, cursor: "pointer" };
-const secondaryBtn = { padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "white", cursor: "pointer" };

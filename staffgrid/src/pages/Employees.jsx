@@ -1,6 +1,28 @@
+// staffgrid/src/pages/Employees.jsx
 import { useEffect, useMemo, useState } from "react";
 import { api, getErrorMessage } from "../lib/api";
 import EmployeeFormModal from "../components/EmployeeFormModal";
+
+// MUI
+import {
+  Box,
+  Stack,
+  Typography,
+  Button,
+  TextField,
+  Paper,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  IconButton,
+  Tooltip,
+  CircularProgress,
+} from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 export default function Employees() {
   const [rows, setRows] = useState([]);
@@ -18,7 +40,7 @@ export default function Employees() {
     setErr("");
     try {
       const { data } = await api.get("/employees");
-      setRows(data);
+      setRows(Array.isArray(data) ? data : []);
     } catch (e) {
       setErr(getErrorMessage(e));
     } finally {
@@ -38,9 +60,7 @@ export default function Employees() {
       const email = r.user?.email?.toLowerCase() || "";
       const dep = r.department?.name?.toLowerCase() || "";
       const pos = r.position?.toLowerCase() || "";
-      return (
-        name.includes(q) || email.includes(q) || dep.includes(q) || pos.includes(q)
-      );
+      return name.includes(q) || email.includes(q) || dep.includes(q) || pos.includes(q);
     });
   }, [rows, query]);
 
@@ -60,125 +80,110 @@ export default function Employees() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Employees</h2>
-        <div style={{ display: "flex", gap: 8 }}>
-          <input
+    <Box p={3}>
+      {/* Header */}
+      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between" gap={2}>
+        <Typography variant="h5" fontWeight={700}>Employees</Typography>
+        <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <TextField
             placeholder="Search name/email/department/position…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 320 }}
+            size="small"
+            fullWidth
           />
-          <button
-            style={styles.primaryBtn}
+          <Button
+            variant="contained"
             onClick={() => { setEditing(null); setOpenForm(true); }}
           >
             New Employee
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Stack>
 
-      {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-      {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
+      {/* Loading / Error / Empty */}
+      {loading && (
+        <Stack direction="row" alignItems="center" gap={1.5} sx={{ mt: 2 }}>
+          <CircularProgress size={20} />
+          <Typography>Loading…</Typography>
+        </Stack>
+      )}
+      {err && <Typography color="error" sx={{ mt: 2 }}>{err}</Typography>}
       {!loading && !err && filtered.length === 0 && (
-        <div style={{ marginTop: 16, color: "#64748b" }}>No employees found.</div>
+        <Typography color="text.secondary" sx={{ mt: 2 }}>No employees found.</Typography>
       )}
 
+      {/* Table */}
       {!loading && !err && filtered.length > 0 && (
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={{ width: 240 }}>Name</th>
-                <th style={{ width: 260 }}>Email</th>
-                <th style={{ width: 200 }}>Department</th>
-                <th style={{ width: 160 }}>Position</th>
-                <th style={{ width: 140 }}>Contract Hours</th>
-                <th style={{ width: 200 }}>Created</th>
-                <th style={{ width: 160 }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={r._id}>
-                  <td>{r.user?.fullName}</td>
-                  <td>{r.user?.email}</td>
-                  <td>{r.department?.name}</td>
-                  <td>{r.position || <span style={{ color: "#94a3b8" }}>—</span>}</td>
-                  <td>{r.contractHours ?? <span style={{ color: "#94a3b8" }}>—</span>}</td>
-                  <td>{new Date(r.createdAt).toLocaleString()}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                      <button
-                        style={styles.secondaryBtn}
-                        onClick={() => { setEditing(r); setOpenForm(true); }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        style={{
-                          ...styles.dangerBtn,
-                          opacity: deletingId === r._id && deleting ? 0.6 : 1,
-                          cursor: deletingId === r._id && deleting ? "wait" : "pointer"
-                        }}
-                        onClick={() => {
-                          const ok = confirm(`Delete employee "${r.user?.fullName}"?`);
-                          if (ok) onDelete(r._id);
-                        }}
-                        disabled={deleting && deletingId === r._id}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {deleteErr && <div style={{ marginTop: 12, color: "#ef4444" }}>{deleteErr}</div>}
-        </div>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell width={240}>Name</TableCell>
+                <TableCell width={260}>Email</TableCell>
+                <TableCell width={200}>Department</TableCell>
+                <TableCell width={160}>Position</TableCell>
+                <TableCell width={140}>Contract Hours</TableCell>
+                <TableCell width={200}>Created</TableCell>
+                <TableCell align="right" width={120}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filtered.map((r) => {
+                const isDeletingThis = deleting && deletingId === r._id;
+                return (
+                  <TableRow key={r._id} hover>
+                    <TableCell>{r.user?.fullName || "—"}</TableCell>
+                    <TableCell>{r.user?.email || "—"}</TableCell>
+                    <TableCell>{r.department?.name || "—"}</TableCell>
+                    <TableCell>{r.position || <span style={{ color: "#94a3b8" }}>—</span>}</TableCell>
+                    <TableCell>{r.contractHours ?? <span style={{ color: "#94a3b8" }}>—</span>}</TableCell>
+                    <TableCell>{new Date(r.createdAt).toLocaleString()}</TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Tooltip title="Edit">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => { setEditing(r); setOpenForm(true); }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <span>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              disabled={isDeletingThis}
+                              onClick={() => {
+                                const ok = confirm(`Delete employee "${r.user?.fullName}"?`);
+                                if (ok) onDelete(r._id);
+                              }}
+                            >
+                              {isDeletingThis ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
+      {deleteErr && <Typography color="error" sx={{ mt: 1.5 }}>{deleteErr}</Typography>}
+
+      {/* Modal */}
       <EmployeeFormModal
         open={openForm}
         onClose={() => setOpenForm(false)}
         onSaved={fetchEmployees}
         initial={editing}
       />
-    </div>
+    </Box>
   );
 }
-
-const styles = {
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    border: "1px solid #e2e8f0"
-  },
-  primaryBtn: {
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: 0,
-    background: "#22c55e",
-    color: "black",
-    fontWeight: 600,
-    cursor: "pointer"
-  },
-  secondaryBtn: {
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: "1px solid #cbd5e1",
-    background: "white",
-    cursor: "pointer"
-  },
-  dangerBtn: {
-    padding: "8px 10px",
-    borderRadius: 8,
-    border: 0,
-    background: "#ef4444",
-    color: "white",
-    fontWeight: 600,
-    cursor: "pointer"
-  }
-};

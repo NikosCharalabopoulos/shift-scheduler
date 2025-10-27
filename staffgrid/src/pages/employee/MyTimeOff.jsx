@@ -3,27 +3,36 @@ import React, { useMemo, useState } from "react";
 import useMyTimeOff from "../../hooks/useMyTimeOff";
 import TimeOffFormModal from "../../components/TimeOffFormModal";
 
-function StatusBadge({ status }) {
+// MUI
+import {
+  Box,
+  Stack,
+  Typography,
+  Button,
+  TextField,
+  Paper,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Chip,
+  CircularProgress,
+} from "@mui/material";
+
+function StatusChip({ status }) {
   const color =
-    status === "APPROVED" ? "#16a34a" :
-    status === "DECLINED" ? "#ef4444" :
-    "#f59e0b"; // PENDING
-  const bg =
-    status === "APPROVED" ? "rgba(22,163,74,0.1)" :
-    status === "DECLINED" ? "rgba(239,68,68,0.12)" :
-    "rgba(245,158,11,0.12)";
+    status === "APPROVED" ? "success" :
+    status === "DECLINED" ? "error" :
+    "warning";
   return (
-    <span style={{
-      display: "inline-block",
-      padding: "2px 8px",
-      borderRadius: 999,
-      fontSize: 12,
-      fontWeight: 700,
-      color,
-      background: bg
-    }}>
-      {status}
-    </span>
+    <Chip
+      size="small"
+      color={color}
+      label={status}
+      sx={{ fontWeight: 700 }}
+    />
   );
 }
 
@@ -66,77 +75,103 @@ export default function MyTimeOff() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1 style={{ marginBottom: 8 }}>My Time Off</h1>
+    <Box p={2}>
+      {/* Header */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        justifyContent="space-between"
+        gap={2}
+      >
+        <Typography variant="h5" fontWeight={700}>My Time Off</Typography>
 
-      <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
-        <input
-          placeholder="Search type/reason/status…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 280 }}
-          disabled={loading}
-        />
-        <button
-          style={{ ...primaryBtn, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
-          onClick={() => { if (!loading) { setEditing(null); setOpenForm(true); } }}
-          disabled={loading}
-        >
-          New Request
-        </button>
-      </div>
+        <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <TextField
+            placeholder="Search type/reason/status…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            size="small"
+            fullWidth
+            disabled={loading}
+          />
+          <Button
+            variant="contained"
+            onClick={() => { if (!loading) { setEditing(null); setOpenForm(true); } }}
+            disabled={loading}
+          >
+            New Request
+          </Button>
+        </Stack>
+      </Stack>
 
-      {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-      {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
+      {/* States */}
+      {loading && (
+        <Stack direction="row" alignItems="center" gap={1.5} sx={{ mt: 2 }}>
+          <CircularProgress size={20} />
+          <Typography>Loading…</Typography>
+        </Stack>
+      )}
+      {err && <Typography color="error" sx={{ mt: 2 }}>{err}</Typography>}
       {!loading && !err && filtered.length === 0 && (
-        <div style={{ marginTop: 16, color: "#64748b" }}>No requests yet.</div>
+        <Typography color="text.secondary" sx={{ mt: 2 }}>No requests yet.</Typography>
       )}
 
+      {/* Table */}
       {!loading && !err && filtered.length > 0 && (
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
-          <table style={table}>
-            <thead>
-              <tr>
-                <th style={{ width: 140 }}>Type</th>
-                <th style={{ width: 220 }}>Dates</th>
-                <th style={{ width: 140 }}>Status</th>
-                <th style={{ width: 320 }}>Reason</th>
-                <th style={{ width: 200 }}>Created</th>
-                <th style={{ width: 180 }}></th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell width={140}>Type</TableCell>
+                <TableCell width={220}>Dates</TableCell>
+                <TableCell width={160}>Status</TableCell>
+                <TableCell>Reason</TableCell>
+                <TableCell width={220}>Created</TableCell>
+                <TableCell align="right" width={180}></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {filtered.map((r) => {
                 const start = new Date(r.startDate).toLocaleDateString();
                 const end = new Date(r.endDate).toLocaleDateString();
                 const created = new Date(r.createdAt).toLocaleString();
                 const isPending = r.status === "PENDING";
                 const rowBusy = busyId === r._id;
+
                 return (
-                  <tr key={r._id}>
-                    <td>{r.type}</td>
-                    <td>{start} — {end}</td>
-                    <td>
-                      <StatusBadge status={r.status} />
-                      {rowBusy && <span style={{ marginLeft: 8, fontSize: 12, color: "#64748b" }}>Processing…</span>}
-                    </td>
-                    <td>{r.reason || <span style={{ color: "#94a3b8" }}>—</span>}</td>
-                    <td>{created}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <button
-                          style={{ ...secondaryBtn, opacity: isPending && !rowBusy ? 1 : 0.5, cursor: isPending && !rowBusy ? "pointer" : "not-allowed" }}
+                  <TableRow key={r._id} hover>
+                    <TableCell>{r.type}</TableCell>
+                    <TableCell>{start} — {end}</TableCell>
+                    <TableCell>
+                      <Stack direction="row" alignItems="center" gap={1}>
+                        <StatusChip status={r.status} />
+                        {rowBusy && (
+                          <Typography variant="caption" color="text.secondary">
+                            Processing…
+                          </Typography>
+                        )}
+                      </Stack>
+                    </TableCell>
+                    <TableCell>
+                      <Typography noWrap title={r.reason || ""} color={r.reason ? "inherit" : "text.secondary"}>
+                        {r.reason || "—"}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>{created}</TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button
+                          variant="outlined"
+                          size="small"
                           disabled={!isPending || rowBusy}
                           onClick={() => { setEditing(r); setOpenForm(true); }}
                         >
-                          {rowBusy ? "..." : "Edit"}
-                        </button>
-                        <button
-                          style={{
-                            ...dangerBtn,
-                            opacity: isPending && !rowBusy ? 1 : 0.6,
-                            cursor: isPending && !rowBusy ? "pointer" : "not-allowed"
-                          }}
+                          {rowBusy ? "…" : "Edit"}
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="error"
+                          size="small"
                           disabled={!isPending || rowBusy}
                           onClick={() => {
                             const ok = confirm(`Delete this ${r.type} request (${start} — ${end})?`);
@@ -144,57 +179,24 @@ export default function MyTimeOff() {
                           }}
                         >
                           {rowBusy ? "Deleting…" : "Delete"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                        </Button>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
+      {/* Modal */}
       <TimeOffFormModal
         open={openForm}
         onClose={() => setOpenForm(false)}
         onSaved={onCreateOrUpdate}
         initial={editing}
       />
-    </div>
+    </Box>
   );
 }
-
-const table = {
-  width: "100%",
-  borderCollapse: "collapse",
-  border: "1px solid #e2e8f0"
-};
-
-const primaryBtn = {
-  padding: "8px 10px",
-  borderRadius: 8,
-  border: 0,
-  background: "#22c55e",
-  color: "black",
-  fontWeight: 600,
-  cursor: "pointer"
-};
-
-const secondaryBtn = {
-  padding: "8px 10px",
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  background: "white",
-  cursor: "pointer"
-};
-
-const dangerBtn = {
-  padding: "8px 10px",
-  borderRadius: 8,
-  border: 0,
-  background: "#ef4444",
-  color: "white",
-  fontWeight: 600,
-  cursor: "pointer"
-};

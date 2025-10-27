@@ -8,7 +8,7 @@ const WEEKDAY_HEADER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
  * Props:
  * - matrix: weeks[][] of Date (από getMonthRange)
  * - month: number (0..11) του anchor month για opacity άλλου μήνα
- * - shifts: array of shift docs
+ * - shifts: array of shift docs (προαιρετικό — αν λείπει, θα εξαχθεί από assignments)
  * - assignments: array of assignment docs (για να δείξουμε count/ονόματα)
  * - onEmptyDayClick(dateObj, ymd)
  * - onShiftClick(shift)  // ανοίγει QuickAssignModal
@@ -21,11 +21,28 @@ export default function MyMonthGrid({
   onEmptyDayClick,
   onShiftClick,
 }) {
-  // Ομαδοποίηση shifts ανά YYYY-MM-DD
+  // 1) Fallback: αν δεν έχουμε shifts, παράγουμε από τα assignments (μοναδικά ανά shift._id)
+  const baseShifts = useMemo(() => {
+    if (Array.isArray(shifts) && shifts.length > 0) return shifts;
+
+    const byId = new Map();
+    (assignments || []).forEach((a) => {
+      const s = a?.shift;
+      // Θέλουμε populated shift object για να έχουμε date/start/end/department
+      if (!s || typeof s !== "object") return;
+      const id = s._id || s.id;
+      if (!id) return;
+      if (!byId.has(id)) byId.set(id, s);
+    });
+
+    return Array.from(byId.values());
+  }, [shifts, assignments]);
+
+  // 2) Ομαδοποίηση shifts ανά YYYY-MM-DD
   const shiftsByDay = useMemo(() => {
     const map = {};
-    (shifts || []).forEach((s) => {
-      if (!s.date) return;
+    (baseShifts || []).forEach((s) => {
+      if (!s?.date) return;
       const ymd = formatYMDLocal(new Date(s.date));
       (map[ymd] ||= []).push(s);
     });
@@ -34,13 +51,13 @@ export default function MyMonthGrid({
       arr.sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""))
     );
     return map;
-  }, [shifts]);
+  }, [baseShifts]);
 
-  // Ομαδοποίηση assignments ανά shiftId για γρήγορη πρόσβαση
+  // 3) Ομαδοποίηση assignments ανά shiftId για εμφάνιση ονομάτων
   const assignmentsByShiftId = useMemo(() => {
     const map = {};
     (assignments || []).forEach((a) => {
-      const sid = a.shift?._id || a.shift; // populated ή id
+      const sid = a?.shift?._id || a?.shift; // populated ή id
       if (!sid) return;
       (map[sid] ||= []).push(a);
     });
@@ -88,14 +105,15 @@ export default function MyMonthGrid({
                     {dayShifts.map((s) => {
                       const asgs = assignmentsByShiftId[s._id] || [];
                       const assignedNames = asgs
-                        .map((a) => a.employee?.user?.fullName)
+                        .map((a) => a?.employee?.user?.fullName)
                         .filter(Boolean);
+
                       return (
                         <div
                           key={s._id}
                           style={{ ...pill, cursor: hasShiftClick ? "pointer" : "default" }}
                           onClick={(e) => {
-                            e.stopPropagation(); // μην πυροδοτήσει το create
+                            e.stopPropagation(); // μην πυροδοτήσει create
                             if (hasShiftClick) onShiftClick(s);
                           }}
                           title="Click to assign/unassign"

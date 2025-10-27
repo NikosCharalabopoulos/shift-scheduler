@@ -4,6 +4,23 @@ import useMyAvailability from "../../hooks/useMyAvailability";
 import AvailabilityFormModal from "../../components/AvailabilityFormModal";
 import { startOfWeek, addDays, formatYMDLocal } from "../../utils/date";
 
+// MUI
+import {
+  Box,
+  Stack,
+  Typography,
+  Button,
+  TextField,
+  Paper,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  CircularProgress,
+} from "@mui/material";
+
 const WEEKDAY_LABEL = {
   0: "Sun",
   1: "Mon",
@@ -14,7 +31,7 @@ const WEEKDAY_LABEL = {
   6: "Sat",
 };
 
-// Δίνει το offset (μέρες) από Monday-start για ένα weekday (0..6, Sunday=0)
+// offset από Monday-start για weekday (0..6, Sunday=0)
 function weekdayOffsetFromMonday(weekday) {
   return weekday === 0 ? 6 : weekday - 1;
 }
@@ -27,7 +44,7 @@ export default function MyAvailability() {
   const [editing, setEditing] = useState(null);
   const [busyId, setBusyId] = useState("");
 
-  // Reference week (για να προβάλλουμε ακριβείς ημερομηνίες)
+  // Reference week (για ακριβείς ημερομηνίες)
   const [refYMD, setRefYMD] = useState(() => formatYMDLocal(new Date()));
   const mondayOfRefWeek = useMemo(() => startOfWeek(new Date(refYMD)), [refYMD]);
 
@@ -76,104 +93,119 @@ export default function MyAvailability() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1 style={{ marginBottom: 8 }}>My Availability</h1>
+    <Box p={2}>
+      {/* Header */}
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        justifyContent="space-between"
+        gap={2}
+      >
+        <Typography variant="h5" fontWeight={700}>My Availability</Typography>
 
-      {/* Controls row: search + reference week */}
-      <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
-        <input
-          placeholder="Search weekday/time/date…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", minWidth: 280 }}
-          disabled={loading}
-        />
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <label style={{ fontSize: 14, color: "#475569" }}>Reference week:</label>
-          <input
-            type="date"
-            value={refYMD}
-            onChange={(e) => setRefYMD(e.target.value)}
-            style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" }}
-            title="Pick any date — θα χρησιμοποιηθεί η εβδομάδα (Δευτέρα–Κυριακή) που την περιέχει"
+        <Stack direction={{ xs: "column", sm: "row" }} gap={1.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+          <TextField
+            placeholder="Search weekday/time/date…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            size="small"
+            fullWidth
             disabled={loading}
           />
-          <button
-            style={{ ...primaryBtn, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
-            onClick={() => { if (!loading) { setEditing(null); setOpenForm(true); } }}
-            disabled={loading}
-          >
-            New Availability
-          </button>
-        </div>
-      </div>
+          <Stack direction="row" gap={1.5} alignItems="center">
+            <TextField
+              label="Reference week"
+              type="date"
+              value={refYMD}
+              onChange={(e) => setRefYMD(e.target.value)}
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              disabled={loading}
+            />
+            <Button
+              variant="contained"
+              onClick={() => { if (!loading) { setEditing(null); setOpenForm(true); } }}
+              disabled={loading}
+            >
+              New Availability
+            </Button>
+          </Stack>
+        </Stack>
+      </Stack>
 
-      {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-      {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
+      {/* States */}
+      {loading && (
+        <Stack direction="row" alignItems="center" gap={1.5} sx={{ mt: 2 }}>
+          <CircularProgress size={20} />
+          <Typography>Loading…</Typography>
+        </Stack>
+      )}
+      {err && <Typography color="error" sx={{ mt: 2 }}>{err}</Typography>}
       {!loading && !err && filtered.length === 0 && (
-        <div style={{ marginTop: 16, color: "#64748b" }}>No availability entries.</div>
+        <Typography color="text.secondary" sx={{ mt: 2 }}>No availability entries.</Typography>
       )}
 
+      {/* Table */}
       {!loading && !err && filtered.length > 0 && (
-        <div style={{ marginTop: 16, overflowX: "auto" }}>
-          <table style={table}>
-            <thead>
-              <tr>
-                <th style={{ width: 140 }}>Weekday</th>
-                <th style={{ width: 180 }}>Date (in selected week)</th>
-                <th style={{ width: 160 }}>Start</th>
-                <th style={{ width: 160 }}>End</th>
-                <th style={{ width: 200 }}>Created</th>
-                <th style={{ width: 160 }}></th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer component={Paper} sx={{ mt: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell width={160}>Weekday</TableCell>
+                <TableCell width={200}>Date (in selected week)</TableCell>
+                <TableCell width={160}>Start</TableCell>
+                <TableCell width={160}>End</TableCell>
+                <TableCell width={220}>Created</TableCell>
+                <TableCell align="right" width={160}></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {filtered.map((r) => {
                 const offset = weekdayOffsetFromMonday(r.weekday);
                 const dateObj = addDays(mondayOfRefWeek, offset);
                 const dateLabel = formatYMDLocal(dateObj);
+                const rowBusy = busyId === r._id;
 
                 return (
-                  <tr key={r._id}>
-                    <td>{WEEKDAY_LABEL[r.weekday] || r.weekday}</td>
-                    <td>{dateLabel}</td>
-                    <td>{r.startTime}</td>
-                    <td>{r.endTime}</td>
-                    <td>{new Date(r.createdAt).toLocaleString()}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                        <button
-                          style={secondaryBtn}
+                  <TableRow key={r._id} hover>
+                    <TableCell>{WEEKDAY_LABEL[r.weekday] || r.weekday}</TableCell>
+                    <TableCell>{dateLabel}</TableCell>
+                    <TableCell>{r.startTime}</TableCell>
+                    <TableCell>{r.endTime}</TableCell>
+                    <TableCell>{new Date(r.createdAt).toLocaleString()}</TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          disabled={rowBusy || loading}
                           onClick={() => { setEditing(r); setOpenForm(true); }}
-                          disabled={busyId === r._id || loading}
                         >
-                          {busyId === r._id ? "..." : "Edit"}
-                        </button>
-                        <button
-                          style={{
-                            ...dangerBtn,
-                            opacity: busyId === r._id ? 0.6 : 1,
-                            cursor: busyId === r._id ? "wait" : "pointer"
-                          }}
-                          disabled={busyId === r._id || loading}
+                          {rowBusy ? "…" : "Edit"}
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="error"
+                          size="small"
+                          disabled={rowBusy || loading}
                           onClick={() => {
                             const ok = confirm(`Delete ${WEEKDAY_LABEL[r.weekday] || r.weekday} ${r.startTime}-${r.endTime}?`);
                             if (ok) onDelete(r._id);
                           }}
                         >
-                          {busyId === r._id ? "Deleting…" : "Delete"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          {rowBusy ? "Deleting…" : "Delete"}
+                        </Button>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
+      {/* Modal */}
       <AvailabilityFormModal
         open={openForm}
         onClose={() => setOpenForm(false)}
@@ -181,40 +213,6 @@ export default function MyAvailability() {
         onSaveMany={onCreateMany}
         initial={editing}
       />
-    </div>
+    </Box>
   );
 }
-
-const table = {
-  width: "100%",
-  borderCollapse: "collapse",
-  border: "1px solid #e2e8f0"
-};
-
-const primaryBtn = {
-  padding: "8px 10px",
-  borderRadius: 8,
-  border: 0,
-  background: "#22c55e",
-  color: "black",
-  fontWeight: 600,
-  cursor: "pointer"
-};
-
-const secondaryBtn = {
-  padding: "8px 10px",
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  background: "white",
-  cursor: "pointer"
-};
-
-const dangerBtn = {
-  padding: "8px 10px",
-  borderRadius: 8,
-  border: 0,
-  background: "#ef4444",
-  color: "white",
-  fontWeight: 600,
-  cursor: "pointer"
-};

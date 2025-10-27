@@ -13,6 +13,17 @@ import MonthNav from "../../components/MonthNav";
 import MyScheduleGrid from "../../components/MyScheduleGrid";
 import MyMonthGrid from "../../components/MyMonthGrid";
 
+// MUI
+import {
+  Box,
+  Stack,
+  Typography,
+  ToggleButtonGroup,
+  ToggleButton,
+  Paper,
+  CircularProgress,
+} from "@mui/material";
+
 function getWeekState(anchor) {
   const start = startOfWeek(anchor);
   const end = addDays(start, 6);
@@ -48,71 +59,77 @@ export default function MySchedule() {
   const { data, loading, err } = useMyAssignments(fromYMD, toYMD);
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1 style={{ marginBottom: 8 }}>My Schedule</h1>
+    <Box p={2}>
+      <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ xs: "flex-start", sm: "center" }} justifyContent="space-between" gap={1}>
+        <Typography variant="h5" fontWeight={700}>My Schedule</Typography>
 
-      {/* Toggle Week/Month */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <button
-          onClick={() => setView("WEEK")}
-          style={{
-            ...toggleBtn,
-            background: view === "WEEK" ? "#0ea5e9" : "white",
-            color: view === "WEEK" ? "white" : "black",
-          }}
+        <ToggleButtonGroup
+          size="small"
+          color="primary"
+          value={view}
+          exclusive
+          onChange={(_, val) => { if (val) setView(val); }}
         >
-          Week
-        </button>
-        <button
-          onClick={() => setView("MONTH")}
-          style={{
-            ...toggleBtn,
-            background: view === "MONTH" ? "#0ea5e9" : "white",
-            color: view === "MONTH" ? "white" : "black",
-          }}
-        >
-          Month
-        </button>
-      </div>
+          <ToggleButton value="WEEK">Week</ToggleButton>
+          <ToggleButton value="MONTH">Month</ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
 
       {view === "WEEK" ? (
         <>
-          <WeekNav
-            label={week.label}
-            onPrev={() => setAnchor((d) => addDays(d, -7))}
-            onToday={() => setAnchor(new Date())}
-            onNext={() => setAnchor((d) => addDays(d, +7))}
-          />
-          {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-          {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
-          {!loading && !err && <MyScheduleGrid days={week.days} assignments={data} />}
+          <Box mt={2}>
+            <WeekNav
+              label={week.label}
+              onPrev={() => setAnchor((d) => addDays(d, -7))}
+              onToday={() => setAnchor(new Date())}
+              onNext={() => setAnchor((d) => addDays(d, +7))}
+            />
+          </Box>
+
+          {loading && (
+            <Stack direction="row" alignItems="center" gap={1.5} mt={2}>
+              <CircularProgress size={20} />
+              <Typography>Loading…</Typography>
+            </Stack>
+          )}
+          {err && <Typography color="error" mt={2}>{err}</Typography>}
+
+          {!loading && !err && (
+            <Paper variant="outlined" sx={{ mt: 2, p: { xs: 1, sm: 1.5 } }}>
+              <MyScheduleGrid days={week.days} assignments={data} />
+            </Paper>
+          )}
         </>
       ) : (
         <>
-          <MonthNav
-            label={month.label}
-            onPrev={() => setAnchor((d) => addMonths(d, -1))}
-            onToday={() => setAnchor(new Date())}
-            onNext={() => setAnchor((d) => addMonths(d, +1))}
-          />
-          {loading && <div style={{ marginTop: 16 }}>Loading…</div>}
-          {err && <div style={{ marginTop: 16, color: "#ef4444" }}>{err}</div>}
-          {!loading && !err && (
-            <MyMonthGrid
-              matrix={month.matrix}
-              month={anchor.getMonth()}
-              assignments={data}
+          <Box mt={2}>
+            <MonthNav
+              label={month.label}
+              onPrev={() => setAnchor((d) => addMonths(d, -1))}
+              onToday={() => setAnchor(new Date())}
+              onNext={() => setAnchor((d) => addMonths(d, +1))}
             />
+          </Box>
+
+          {loading && (
+            <Stack direction="row" alignItems="center" gap={1.5} mt={2}>
+              <CircularProgress size={20} />
+              <Typography>Loading…</Typography>
+            </Stack>
+          )}
+          {err && <Typography color="error" mt={2}>{err}</Typography>}
+
+          {!loading && !err && (
+            <Paper variant="outlined" sx={{ mt: 2, p: { xs: 1, sm: 1.5 } }}>
+              <MyMonthGrid
+                matrix={month.matrix}
+                month={anchor.getMonth()}
+                assignments={data}
+              />
+            </Paper>
           )}
         </>
       )}
-    </div>
+    </Box>
   );
 }
-
-const toggleBtn = {
-  padding: "6px 10px",
-  borderRadius: 8,
-  border: "1px solid #cbd5e1",
-  cursor: "pointer",
-};
