@@ -1,6 +1,9 @@
+// staffgrid/src/App.jsx
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleGuard from "./components/RoleGuard";
+
+import TopBar from "./components/TopBar"; // ✅ νέο import
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -18,90 +21,95 @@ import TimeOffAdmin from "./pages/TimeOffAdmin";
 
 export default function App() {
   return (
-    <Routes>
-      {/* Public */}
-      <Route path="/login" element={<Login />} />
+    <>
+      {/* ✅ Το TopBar θα εμφανίζεται παντού εκτός του /login */}
+      <TopBar />
 
-      {/* Protected */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+      <Routes>
+        {/* Public */}
+        <Route path="/login" element={<Login />} />
 
-        <Route
-          path="/users"
-          element={
-            <RoleGuard allow={["OWNER", "MANAGER"]}>
-              <Users />
-            </RoleGuard>
-          }
-        />
+        {/* Protected */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-        <Route
-          path="/departments"
-          element={
-            <RoleGuard allow={["OWNER", "MANAGER"]}>
-              <Departments />
-            </RoleGuard>
-          }
-        />
+          <Route
+            path="/users"
+            element={
+              <RoleGuard allow={["OWNER", "MANAGER"]}>
+                <Users />
+              </RoleGuard>
+            }
+          />
 
-        <Route
-          path="/employees"
-          element={
-            <RoleGuard allow={["OWNER", "MANAGER"]}>
-              <Employees />
-            </RoleGuard>
-          }
-        />
+          <Route
+            path="/departments"
+            element={
+              <RoleGuard allow={["OWNER", "MANAGER"]}>
+                <Departments />
+              </RoleGuard>
+            }
+          />
 
-        {/* ✅ Admin schedule */}
-        <Route
-          path="/schedule"
-          element={
-            <RoleGuard allow={["OWNER", "MANAGER"]}>
-              <Schedule />
-            </RoleGuard>
-          }
-        />
+          <Route
+            path="/employees"
+            element={
+              <RoleGuard allow={["OWNER", "MANAGER"]}>
+                <Employees />
+              </RoleGuard>
+            }
+          />
 
-        <Route
- path="/timeoff-admin"
-  element={
-    <RoleGuard allow={["OWNER", "MANAGER"]}>
-      <TimeOffAdmin />
-    </RoleGuard>
-  }
-/>
+          {/* ✅ Admin schedule */}
+          <Route
+            path="/schedule"
+            element={
+              <RoleGuard allow={["OWNER", "MANAGER"]}>
+                <Schedule />
+              </RoleGuard>
+            }
+          />
 
-        {/* ✅ Employee Portal routes */}
-        <Route
-          path="/my-schedule"
-          element={
-            <RoleGuard allow={["EMPLOYEE"]}>
-              <MySchedule />
-            </RoleGuard>
-          }
-        />
-        <Route
-          path="/my-timeoff"
-          element={
-            <RoleGuard allow={["EMPLOYEE"]}>
-              <MyTimeOff />
-            </RoleGuard>
-          }
-        />
-        <Route
-          path="/my-availability"
-          element={
-            <RoleGuard allow={["EMPLOYEE"]}>
-              <MyAvailability />
-            </RoleGuard>
-          }
-        />
-      </Route>
+          <Route
+            path="/timeoff-admin"
+            element={
+              <RoleGuard allow={["OWNER", "MANAGER"]}>
+                <TimeOffAdmin />
+              </RoleGuard>
+            }
+          />
 
-      {/* Fallback */}
-      <Route path="*" element={<div style={{ padding: 24 }}>Not found</div>} />
-    </Routes>
+          {/* ✅ Employee Portal routes */}
+          <Route
+            path="/my-schedule"
+            element={
+              <RoleGuard allow={["EMPLOYEE"]}>
+                <MySchedule />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/my-timeoff"
+            element={
+              <RoleGuard allow={["EMPLOYEE"]}>
+                <MyTimeOff />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="/my-availability"
+            element={
+              <RoleGuard allow={["EMPLOYEE"]}>
+                <MyAvailability />
+              </RoleGuard>
+            }
+          />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<div style={{ padding: 24 }}>Not found</div>} />
+      </Routes>
+    </>
   );
 }

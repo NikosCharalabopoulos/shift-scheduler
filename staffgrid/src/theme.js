@@ -1,23 +1,52 @@
-// src/theme.js
 import { createTheme } from "@mui/material/styles";
+import { grey } from "@mui/material/colors";
 
-// ΑΛΛΑΞΕ αυτό:
-export const theme = createTheme({
+const theme = createTheme({
   palette: {
     mode: "light",
     primary: { main: "#0ea5e9" },
     success: { main: "#22c55e" },
     error:   { main: "#ef4444" },
     warning: { main: "#f59e0b" },
+    // ✅ απαλό φόντο για όλο το app
+    background: {
+      default: grey[50],
+      paper: "#ffffff",
+    },
+    divider: "#e2e8f0",
   },
-  shape: { borderRadius: 8 },
+  shape: { borderRadius: 10 },
   typography: {
-    fontFamily: '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
+    fontFamily:
+      '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial',
     h5: { fontWeight: 700 },
     button: { textTransform: "none" },
   },
   components: {
-    MuiButton: { defaultProps: { size: "small" } },
+    MuiPaper: {
+      defaultProps: { elevation: 0, variant: "outlined" },
+      styleOverrides: {
+        root: {
+          borderColor: "#e2e8f0",
+          // ελαφριά “αιώρηση” στο hover για κάρτες
+          transition: "box-shadow .2s ease, transform .2s ease",
+          "&:hover": {
+            boxShadow: "0 6px 18px rgba(15,23,42,0.06)",
+          },
+        },
+      },
+    },
+    MuiButton: {
+      defaultProps: { size: "small" },
+      styleOverrides: {
+        root: { borderRadius: 10, fontWeight: 600 },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: { borderRadius: 999 },
+      },
+    },
     MuiToggleButton: {
       styleOverrides: {
         root: {
@@ -32,12 +61,11 @@ export const theme = createTheme({
       },
     },
     MuiToggleButtonGroup: {
-      styleOverrides: { root: { borderRadius: 8, border: "1px solid #e2e8f0" } },
+      styleOverrides: {
+        root: { borderRadius: 8, border: "1px solid #e2e8f0" },
+      },
     },
-    MuiPaper: {
-      defaultProps: { elevation: 0, variant: "outlined" },
-      styleOverrides: { root: { borderColor: "#e2e8f0" } },
-    },
-    MuiTableCell: { styleOverrides: { head: { fontWeight: 700 } } },
   },
 });
+
+export default theme;
